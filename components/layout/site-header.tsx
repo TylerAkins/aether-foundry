@@ -35,12 +35,6 @@ export function SiteHeader() {
           >
             Our principles
           </a>
-          <a
-            href="mailto:hello@aetherfoundry.com"
-            className="ml-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Start a conversation
-          </a>
         </nav>
       </div>
     </header>

@@ -76,9 +76,8 @@ export default function HomePage() {
                 Software that works well and holds up over time.
               </h1>
               <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl">
-                Aether Foundry designs and builds software products, internal
-                tools, and experimental projects for teams with real problems
-                to solve.
+                Aether Foundry is where we build software products, internal
+                tools, games, and technical experiments.
               </p>
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <a
@@ -92,10 +91,10 @@ export default function HomePage() {
                   <ArrowRight data-icon="inline-end" aria-hidden />
                 </a>
                 <a
-                  href="mailto:hello@aetherfoundry.com"
+                  href="#principles"
                   className="inline-flex h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-slate-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
                 >
-                  Start a conversation
+                  How we work
                 </a>
               </div>
             </div>
