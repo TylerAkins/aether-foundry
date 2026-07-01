@@ -51,6 +51,8 @@ const principles = [
 ] as const;
 
 export default function HomePage() {
+  const currentYear = new Date().getFullYear();
+
   return (
     <div className="min-h-screen overflow-hidden">
       <SiteHeader />
@@ -180,7 +182,7 @@ export default function HomePage() {
       </main>
 
       <footer className="px-6 py-10 text-center text-sm text-slate-500">
-        <p>Aether Foundry</p>
+        <p>© {currentYear} Aether Foundry</p>
       </footer>
     </div>
   );
