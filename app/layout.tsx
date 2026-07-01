@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Aether Foundry",
   description:
-    "Aether Foundry builds thoughtful software products, internal tools, and games.",
+    "Aether Foundry designs and builds software products, internal tools, and experimental projects.",
 };
 
 export const viewport: Viewport = {

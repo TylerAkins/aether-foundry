@@ -9,21 +9,21 @@ const capabilities = [
   {
     title: "Software products",
     description:
-      "Focused digital products built around real workflows, clear interfaces, and lasting value.",
+      "Web applications built around real workflows, with interfaces that make sense to the people using them.",
     icon: Boxes,
     accent: "blue",
   },
   {
     title: "Internal platforms",
     description:
-      "Secure shared systems that give teams one reliable place to work, launch, and grow.",
+      "Secure systems that replace scattered processes and give teams one dependable place to work.",
     icon: ShieldCheck,
     accent: "orange",
   },
   {
     title: "Games and experiments",
     description:
-      "A home for ambitious game projects and thoughtful technical exploration.",
+      "Room for game projects, prototypes, and technical ideas worth exploring.",
     icon: Gamepad2,
     accent: "blue",
   },
@@ -32,27 +32,22 @@ const capabilities = [
 const principles = [
   {
     number: "01",
-    title: "Clarity first",
-    description: "Readable systems and calm experiences beat clever complexity.",
+    title: "Keep it clear",
+    description:
+      "We make deliberate choices and avoid complexity that does not earn its place.",
   },
   {
     number: "02",
-    title: "Secure by design",
-    description: "Trust is built into the foundation, not patched in at the end.",
+    title: "Build security in",
+    description:
+      "Security is part of the design and implementation from the start.",
   },
   {
     number: "03",
-    title: "Made to endure",
-    description: "We choose maintainable technology and build for the long view.",
+    title: "Think past launch",
+    description:
+      "We choose technology that can be understood, maintained, and improved over time.",
   },
-] as const;
-
-const focusTags = ["Products", "Platforms", "Experiments"] as const;
-
-const signaturePoints = [
-  "Clear product thinking",
-  "Secure foundations",
-  "Long-term maintainability",
 ] as const;
 
 export default function HomePage() {
@@ -62,7 +57,7 @@ export default function HomePage() {
 
       <main>
         <section className="px-4 py-5 sm:px-6 sm:py-7">
-          <div className="relative mx-auto min-h-[38rem] w-full max-w-7xl overflow-hidden rounded-[2rem] bg-brand-ink text-white shadow-[0_35px_90px_-45px_rgba(15,23,42,0.8)]">
+          <div className="relative mx-auto min-h-[32rem] w-full max-w-7xl overflow-hidden rounded-[2rem] bg-brand-ink text-white shadow-[0_35px_90px_-45px_rgba(15,23,42,0.8)]">
             <div
               className="pointer-events-none absolute -top-48 left-1/4 size-[34rem] rounded-full bg-brand-blue/25 blur-[120px]"
               aria-hidden
@@ -72,27 +67,18 @@ export default function HomePage() {
               aria-hidden
             />
 
-            <div className="relative z-10 flex min-h-[38rem] min-w-0 flex-col justify-center px-7 py-16 sm:px-12 lg:px-20 lg:py-20">
-              <div className="mb-8 flex items-center gap-3 text-xs font-semibold tracking-[0.2em] text-sky-200 uppercase">
+            <div className="relative z-10 flex min-h-[32rem] min-w-0 flex-col justify-center px-7 py-14 sm:px-12 lg:px-20 lg:py-16">
+              <div className="mb-7 flex items-center gap-3 text-xs font-semibold tracking-[0.2em] text-sky-200 uppercase">
                 <span className="h-px w-8 bg-brand-blue" aria-hidden />
-                Software forged with purpose
-              </div>
-              <div className="mb-7 flex flex-wrap gap-2">
-                {focusTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.68rem] font-semibold tracking-[0.18em] text-slate-200 uppercase"
-                  >
-                    {tag}
-                  </span>
-                ))}
+                Software built for real work
               </div>
               <h1 className="max-w-4xl text-5xl leading-[0.98] font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
-                Building software with craft, clarity, and staying power.
+                Software that works well and holds up over time.
               </h1>
-              <p className="mt-7 max-w-xl text-lg leading-8 text-slate-300 sm:text-xl">
-                Aether Foundry creates focused products, dependable internal
-                platforms, and ambitious digital experiences.
+              <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl">
+                Aether Foundry designs and builds software products, internal
+                tools, and experimental projects for teams with real problems
+                to solve.
               </p>
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <a
@@ -106,21 +92,11 @@ export default function HomePage() {
                   <ArrowRight data-icon="inline-end" aria-hidden />
                 </a>
                 <a
-                  href="#principles"
+                  href="mailto:hello@aetherfoundry.com"
                   className="inline-flex h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-slate-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
                 >
-                  How we work
+                  Start a conversation
                 </a>
-              </div>
-              <div className="mt-12 grid max-w-2xl gap-3 sm:grid-cols-3">
-                {signaturePoints.map((point) => (
-                  <div
-                    key={point}
-                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-medium text-slate-200 shadow-[0_12px_30px_-20px_rgba(0,0,0,0.75)]"
-                  >
-                    {point}
-                  </div>
-                ))}
               </div>
             </div>
 
@@ -135,12 +111,12 @@ export default function HomePage() {
                   What we build
                 </p>
                 <h2 className="mt-4 max-w-xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-                  One foundry. Many possibilities.
+                  Products, tools, and experiments.
                 </h2>
               </div>
               <p className="max-w-2xl text-lg leading-8 text-slate-600 lg:justify-self-end">
-                We build software that solves concrete problems and remains a
-                pleasure to use as the people and businesses around it grow.
+                From customer-facing products to internal systems, we build
+                software that is clear, useful, and maintainable.
               </p>
             </div>
 
@@ -183,7 +159,7 @@ export default function HomePage() {
                   Our principles
                 </p>
                 <h2 className="relative mt-5 text-4xl font-semibold tracking-tight">
-                  Strong work starts with strong fundamentals.
+                  How we approach the work.
                 </h2>
               </div>
               <ol className="divide-y divide-slate-200 px-7 sm:px-10">
@@ -205,7 +181,7 @@ export default function HomePage() {
       </main>
 
       <footer className="px-6 py-10 text-center text-sm text-slate-500">
-        <p>Aether Foundry. Software built with intent.</p>
+        <p>Aether Foundry</p>
       </footer>
     </div>
   );

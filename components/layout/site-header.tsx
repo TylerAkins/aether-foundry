@@ -17,14 +17,8 @@ export function SiteHeader() {
               <span className="absolute inset-[0.28rem] rounded-[0.22rem] bg-slate-950" />
             </span>
           </span>
-          <span>
-            <span className="block text-sm font-bold tracking-tight text-slate-950">
-              Aether
-              <span className="text-slate-500"> Foundry</span>
-            </span>
-            <span className="block text-[0.65rem] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-              Software studio
-            </span>
+          <span className="text-sm font-bold tracking-tight text-slate-950">
+            Aether <span className="text-slate-500">Foundry</span>
           </span>
         </Link>
 
@@ -40,6 +34,12 @@ export function SiteHeader() {
             className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Our principles
+          </a>
+          <a
+            href="mailto:hello@aetherfoundry.com"
+            className="ml-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Start a conversation
           </a>
         </nav>
       </div>
