@@ -8,6 +8,13 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { SiteShell } from "@/components/layout/site-shell";
 
+const publicNavigation = [
+  { label: "Home", href: "/" },
+  { label: "Products & Services", href: "/products-services" },
+  { label: "Games", href: "/games" },
+  { label: "About Us", href: "/about-us" },
+] as const;
+
 vi.mock("next/image", () => ({
   default: (props: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => {
     const imageProps = { ...props };
@@ -65,9 +72,21 @@ describe("SiteShell", () => {
 
     const primaryLinks = Array.from(
       document.querySelectorAll('nav[aria-label="Primary navigation"] a')
-    ).map((link) => link.textContent);
+    ).map((link) => ({
+      label: link.textContent,
+      href: link.getAttribute("href"),
+    }));
 
-    expect(primaryLinks).toEqual(["What we build", "Our principles"]);
+    expect(primaryLinks).toEqual(publicNavigation);
+
+    const footerLinks = Array.from(
+      document.querySelectorAll('nav[aria-label="Footer navigation"] a')
+    ).map((link) => ({
+      label: link.textContent,
+      href: link.getAttribute("href"),
+    }));
+
+    expect(footerLinks).toEqual(publicNavigation);
   });
 
   it("exposes an accessible mobile navigation toggle", async () => {
@@ -90,6 +109,15 @@ describe("SiteShell", () => {
     expect(
       document.querySelector("#mobile-primary-navigation")?.className
     ).toContain("block");
+
+    const mobileLinks = Array.from(
+      document.querySelectorAll("#mobile-primary-navigation a")
+    ).map((link) => ({
+      label: link.textContent,
+      href: link.getAttribute("href"),
+    }));
+
+    expect(mobileLinks).toEqual(publicNavigation);
   });
 
   it("has no critical accessibility violations in the shared shell", async () => {

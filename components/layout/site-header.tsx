@@ -5,13 +5,9 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import * as React from "react";
 
+import { publicNavigationItems } from "@/components/layout/public-navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const navigationItems = [
-  { label: "What we build", href: "#capabilities" },
-  { label: "Our principles", href: "#principles" },
-] as const;
 
 export function SiteHeader() {
   return (
@@ -42,7 +38,7 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="Primary navigation" className="hidden items-center gap-1 sm:flex">
-          {navigationItems.map((item) => (
+          {publicNavigationItems.map((item) => (
             <NavLink key={item.href} href={item.href}>
               {item.label}
             </NavLink>
@@ -60,9 +56,9 @@ function NavLink({
   className,
   href,
   ...props
-}: React.ComponentProps<"a"> & { href: string }) {
+}: React.ComponentProps<typeof Link> & { href: string }) {
   return (
-    <a
+    <Link
       href={href}
       className={cn(
         "rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -71,7 +67,7 @@ function NavLink({
       {...props}
     >
       {children}
-    </a>
+    </Link>
   );
 }
 
@@ -101,7 +97,7 @@ function MobileNavigation() {
           isOpen ? "block" : "hidden"
         )}
       >
-        {navigationItems.map((item) => (
+        {publicNavigationItems.map((item) => (
           <NavLink
             key={item.href}
             href={item.href}
