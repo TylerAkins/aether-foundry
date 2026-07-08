@@ -5,29 +5,52 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import * as schema from "@/lib/db/schema";
-import { databaseEnv } from "@/lib/env/database";
+import { parseDatabaseEnv } from "@/lib/env/database-schema";
 
 type PostgresClient = ReturnType<typeof postgres>;
+type Database = ReturnType<typeof createDatabase>;
 
 declare global {
   var aetherFoundryPostgresClient: PostgresClient | undefined;
+  var aetherFoundryDatabase: Database | undefined;
 }
 
-const queryClient =
-  globalThis.aetherFoundryPostgresClient ??
-  postgres(databaseEnv.DATABASE_URL, {
+function createQueryClient(): PostgresClient {
+  const databaseEnv = parseDatabaseEnv(process.env);
+
+  return postgres(databaseEnv.DATABASE_URL, {
     max: 10,
   });
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.aetherFoundryPostgresClient = queryClient;
 }
 
-export const db = drizzle({ client: queryClient, schema });
+function getQueryClient(): PostgresClient {
+  const queryClient =
+    globalThis.aetherFoundryPostgresClient ?? createQueryClient();
+
+  if (process.env.NODE_ENV !== "production") {
+    globalThis.aetherFoundryPostgresClient = queryClient;
+  }
+
+  return queryClient;
+}
+
+function createDatabase() {
+  return drizzle({ client: getQueryClient(), schema });
+}
+
+export function getDb(): Database {
+  const database = globalThis.aetherFoundryDatabase ?? createDatabase();
+
+  if (process.env.NODE_ENV !== "production") {
+    globalThis.aetherFoundryDatabase = database;
+  }
+
+  return database;
+}
 
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {
-    await db.execute(sql`select 1`);
+    await getDb().execute(sql`select 1`);
 
     return true;
   } catch (error) {

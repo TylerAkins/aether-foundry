@@ -1,42 +1,117 @@
+"use client";
+
+import Image from "next/image";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
+import * as React from "react";
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const navigationItems = [
+  { label: "What we build", href: "#capabilities" },
+  { label: "Our principles", href: "#principles" },
+] as const;
 
 export function SiteHeader() {
   return (
-    <header className="relative z-20 px-4 pt-4 sm:px-6 sm:pt-6">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] backdrop-blur-xl sm:px-5">
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
+      <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-4">
         <Link
           href="/"
-          className="flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label="Aether Foundry home"
         >
-          <span
-            aria-hidden
-            className="flex size-10 items-center justify-center rounded-xl bg-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-slate-900/10"
-          >
-            <span className="relative size-4">
-              <span className="absolute inset-0 rotate-45 rounded-[0.4rem] bg-gradient-to-br from-sky-400 via-sky-600 to-orange-500" />
-              <span className="absolute inset-[0.28rem] rounded-[0.22rem] bg-slate-950" />
-            </span>
-          </span>
-          <span className="text-sm font-bold tracking-tight text-slate-950">
-            Aether <span className="text-slate-500">Foundry</span>
-          </span>
+          <Image
+            src="/branding/icon.svg"
+            alt=""
+            aria-hidden="true"
+            width={36}
+            height={36}
+            className="size-9 shrink-0 rounded-lg"
+            priority
+          />
+          <Image
+            src="/branding/logo.svg"
+            alt="Aether Foundry"
+            width={128}
+            height={24}
+            className="h-6 w-32 shrink-0"
+            priority
+          />
         </Link>
 
         <nav aria-label="Primary navigation" className="hidden items-center gap-1 sm:flex">
-          <a
-            href="#capabilities"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            What we build
-          </a>
-          <a
-            href="#principles"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Our principles
-          </a>
+          {navigationItems.map((item) => (
+            <NavLink key={item.href} href={item.href}>
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
+
+        <MobileNavigation />
       </div>
     </header>
+  );
+}
+
+function NavLink({
+  children,
+  className,
+  href,
+  ...props
+}: React.ComponentProps<"a"> & { href: string }) {
+  return (
+    <a
+      href={href}
+      className={cn(
+        "rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </a>
+  );
+}
+
+function MobileNavigation() {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const menuId = "mobile-primary-navigation";
+
+  return (
+    <div className="sm:hidden">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-controls={menuId}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? "Close primary navigation" : "Open primary navigation"}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        {isOpen ? <X aria-hidden /> : <Menu aria-hidden />}
+      </Button>
+
+      <nav
+        id={menuId}
+        aria-label="Mobile primary navigation"
+        className={cn(
+          "absolute inset-x-4 top-[calc(100%+0.5rem)] rounded-lg border border-slate-200 bg-white p-2 shadow-lg",
+          isOpen ? "block" : "hidden"
+        )}
+      >
+        {navigationItems.map((item) => (
+          <NavLink
+            key={item.href}
+            href={item.href}
+            className="block px-3 py-3"
+            onClick={() => setIsOpen(false)}
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
   );
 }

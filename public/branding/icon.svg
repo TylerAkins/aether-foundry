@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>Aether Foundry icon</title>
+  <rect width="64" height="64" rx="14" fill="#0f172a" />
+  <path d="M39 18l14 14-14 14M25 46L11 32l14-14M36 10L28 54" fill="none" stroke="#f8fafc" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M39 18l14 14-14 14" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
