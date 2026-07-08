@@ -42,7 +42,7 @@ const pages = [
     name: "Products & Services",
     Component: ProductsServicesPage,
     metadata: productsMetadata,
-    expectedHeading: "Focused software products built from practical service work.",
+    expectedHeading: "Focused products for workflows where clarity matters.",
   },
   {
     name: "Games",
@@ -102,15 +102,16 @@ describe("public pages", () => {
     expect(headings).toEqual([expectedHeading]);
   });
 
-  it("presents KVisaAssistant as unfinished and in development", async () => {
+  it("presents K Visa Assistant as an early product in development", async () => {
     await renderPage(<ProductsServicesPage />);
 
     const pageText = document.body.textContent ?? "";
 
-    expect(pageText).toContain("KVisaAssistant");
-    expect(pageText).toMatch(/unfinished/i);
+    expect(pageText).toContain("K Visa Assistant");
+    expect(pageText).toMatch(/early product|early build/i);
     expect(pageText).toMatch(/in development/i);
-    expect(pageText).not.toMatch(/sign up|buy now|purchase|available now/i);
+    expect(pageText).not.toMatch(/finished product|live service/i);
+    expect(pageText).not.toMatch(/sign up|buy now|purchase|available now|AI-powered/i);
   });
 
   it("presents games as roadmap work without fabricated release language", async () => {

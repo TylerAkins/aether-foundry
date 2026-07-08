@@ -41,7 +41,7 @@ const publicPages = [
   {
     title: "Products & Services",
     description:
-      "See the initial product direction, including KVisaAssistant as an in-development product.",
+      "See the first product area, including K Visa Assistant as an early build.",
     href: "/products-services",
     icon: Boxes,
   },

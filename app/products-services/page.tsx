@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export const metadata: Metadata = {
   title: "Products & Services | Aether Foundry",
   description:
-    "Products and services from Aether Foundry, initially featuring KVisaAssistant as an in-development product.",
+    "Products and services from Aether Foundry, starting with K Visa Assistant as an early build.",
 };
 
 const productPrinciples = [
@@ -42,11 +42,12 @@ export default function ProductsServicesPage() {
               Products & Services
             </p>
             <h1 className="mt-5 max-w-4xl text-5xl leading-tight font-semibold text-slate-950 sm:text-6xl">
-              Focused software products built from practical service work.
+              Focused products for workflows where clarity matters.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-              Aether Foundry builds products and internal systems with an emphasis
-              on clarity, maintainability, and security from the first version.
+              Aether Foundry builds products and internal systems for work that
+              needs clear steps, careful handling, and software that stays easy
+              to understand.
             </p>
           </div>
 
@@ -55,12 +56,12 @@ export default function ProductsServicesPage() {
               Initial product
             </p>
             <h2 className="mt-4 text-3xl font-semibold text-slate-950">
-              KVisaAssistant
+              K Visa Assistant
             </h2>
             <p className="mt-4 leading-7 text-slate-600">
-              KVisaAssistant is the initial product direction for Aether Foundry.
-              It is unfinished and in development, so this page introduces the
-              product area without presenting it as a live customer product.
+              K Visa Assistant is an early product from Aether Foundry. It is
+              still in development, so this page shares the direction while the
+              work is still underway.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <span className="rounded-lg bg-sky-100 px-3 py-2 text-sm font-semibold text-sky-800">
@@ -108,9 +109,9 @@ export default function ProductsServicesPage() {
               Current availability
             </h2>
             <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-              KVisaAssistant is not being presented as a live release. Aether
-              Foundry will publish clearer product availability details when the
-              product is ready for public use.
+              K Visa Assistant is not open for public use yet. Aether Foundry
+              will share availability details when the product is ready to stand
+              behind.
             </p>
             <Link
               href="/about-us"
