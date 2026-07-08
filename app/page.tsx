@@ -1,9 +1,17 @@
-import { ArrowRight, Boxes, Gamepad2, ShieldCheck } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowRight, Boxes, Building2, Gamepad2, ShieldCheck } from "lucide-react";
 
 import { SiteShell } from "@/components/layout/site-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "Aether Foundry | Durable Software Company",
+  description:
+    "Aether Foundry builds focused software products, internal systems, games, and technical experiments with clarity and maintainability.",
+};
 
 const capabilities = [
   {
@@ -26,6 +34,30 @@ const capabilities = [
       "Room for game projects, prototypes, and technical ideas worth exploring.",
     icon: Gamepad2,
     accent: "blue",
+  },
+] as const;
+
+const publicPages = [
+  {
+    title: "Products & Services",
+    description:
+      "See the initial product direction, including KVisaAssistant as an in-development product.",
+    href: "/products-services",
+    icon: Boxes,
+  },
+  {
+    title: "Games",
+    description:
+      "Review the roadmap status for game projects and experiments without fabricated releases.",
+    href: "/games",
+    icon: Gamepad2,
+  },
+  {
+    title: "About Us",
+    description:
+      "Read about the company mission and engineering philosophy behind the work.",
+    href: "/about-us",
+    icon: Building2,
   },
 ] as const;
 
@@ -68,19 +100,19 @@ export default function HomePage() {
               exploratory game work with a bias for clarity and maintainability.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <a
-                href="#capabilities"
+              <Link
+                href="/products-services"
                 className={cn(buttonVariants({ size: "lg" }), "h-11 px-5")}
               >
-                See what we build
+                See products and services
                 <ArrowRight data-icon="inline-end" aria-hidden />
-              </a>
-              <a
-                href="#principles"
+              </Link>
+              <Link
+                href="/about-us"
                 className="inline-flex h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 How we work
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -180,6 +212,44 @@ export default function HomePage() {
                       {title}
                     </h3>
                     <p className="mt-3 leading-7 text-slate-600">{description}</p>
+                  </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="border-y border-slate-200 bg-white px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="max-w-3xl">
+            <p className="text-sm font-bold text-brand-blue-deep uppercase">
+              Public pages
+            </p>
+            <h2 className="mt-4 text-4xl font-semibold text-slate-950 sm:text-5xl">
+              Explore the current company site.
+            </h2>
+          </div>
+
+          <ul role="list" className="mt-10 grid gap-5 lg:grid-cols-3">
+            {publicPages.map(({ title, description, href, icon: Icon }) => (
+              <li key={href}>
+                <Card className="h-full gap-0 rounded-lg border-0 bg-slate-50 py-0 ring-1 ring-slate-200/80">
+                  <CardContent className="p-7">
+                    <span className="flex size-11 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+                      <Icon className="size-5" aria-hidden />
+                    </span>
+                    <h3 className="mt-6 text-xl font-semibold text-slate-950">
+                      {title}
+                    </h3>
+                    <p className="mt-3 leading-7 text-slate-600">{description}</p>
+                    <Link
+                      href={href}
+                      className="mt-6 inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-brand-blue-deep transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      Open {title}
+                      <ArrowRight className="size-4" aria-hidden />
+                    </Link>
                   </CardContent>
                 </Card>
               </li>
