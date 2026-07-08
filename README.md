@@ -11,6 +11,7 @@ Company website, shared employee identity platform, internal portal, and product
 ```bash
 mise install
 pnpm install --frozen-lockfile
+cp .env.example .env.local
 pnpm dev
 ```
 
@@ -48,6 +49,31 @@ Careers, applicant tracking, employee lifecycle automation, and HR features rema
 | `pnpm typecheck` | Run strict TypeScript checks without emitting files |
 | `pnpm test` | Run unit tests once |
 | `pnpm test:watch` | Run unit tests in watch mode |
+| `pnpm db:generate` | Generate Drizzle migrations from the schema |
+| `pnpm db:migrate` | Apply generated Drizzle migrations to PostgreSQL |
+
+## Database
+
+The app expects PostgreSQL through one `DATABASE_URL` environment variable.
+Copy `.env.example` to `.env.local` and replace the placeholder password before
+running database commands or server routes that touch persistence.
+
+Example local URL:
+
+```env
+DATABASE_URL="postgresql://aether_foundry:change-me@localhost:5432/aether_foundry"
+```
+
+Create a local database with any PostgreSQL setup you prefer, then run:
+
+```bash
+pnpm db:generate
+pnpm db:migrate
+```
+
+The database health endpoint is available at `/api/health/database`. It reports
+only whether the database is available and never returns credentials, hostnames,
+driver errors, stack traces, or migration details.
 
 ## Architecture
 
