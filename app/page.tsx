@@ -53,19 +53,19 @@ const principles = [
 export default function HomePage() {
   return (
     <SiteShell>
-      <section className="px-4 py-5 sm:px-6 sm:py-7">
-        <div className="mx-auto min-h-[32rem] w-full max-w-7xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_28px_80px_-45px_rgba(15,23,42,0.45)]">
-          <div className="flex min-h-[32rem] min-w-0 flex-col justify-center px-7 py-14 sm:px-12 lg:px-20 lg:py-16">
-            <div className="mb-7 flex items-center gap-3 text-xs font-semibold text-brand-blue-deep uppercase">
-              <span className="h-px w-8 bg-brand-blue" aria-hidden />
+      <section className="border-b border-slate-200 bg-white px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
+        <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div className="min-w-0">
+            <p className="flex items-center gap-3 text-xs font-bold text-brand-blue-deep uppercase">
+              <span className="h-px w-9 bg-brand-blue" aria-hidden />
               Software built for real work
-            </div>
-            <h1 className="max-w-4xl text-5xl leading-[0.98] font-semibold text-balance text-slate-950 sm:text-6xl lg:text-7xl">
-              Software that works well and holds up over time.
+            </p>
+            <h1 className="mt-7 max-w-4xl text-5xl leading-[0.98] font-semibold text-balance text-slate-950 sm:text-6xl lg:text-7xl">
+              Durable software for products, teams, and experiments.
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-              Aether Foundry is where we build software products, internal
-              tools, games, and technical experiments.
+              Aether Foundry builds focused web products, internal systems, and
+              exploratory game work with a bias for clarity and maintainability.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
               <a
@@ -83,10 +83,68 @@ export default function HomePage() {
               </a>
             </div>
           </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-[0_24px_70px_-45px_rgba(15,23,42,0.5)] lg:p-5">
+            <div className="rounded-lg border border-slate-200 bg-white p-5">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div>
+                  <p className="text-xs font-bold text-brand-blue-deep uppercase">
+                    Foundry focus
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Current platform foundation
+                  </p>
+                </div>
+                <span className="rounded-lg bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                  MVP
+                </span>
+              </div>
+
+              <ul role="list" className="divide-y divide-slate-200">
+                {capabilities.map(({ title, description, icon: Icon, accent }) => (
+                  <li key={title} className="grid grid-cols-[2.75rem_1fr] gap-4 py-5">
+                    <span
+                      className={cn(
+                        "flex size-11 items-center justify-center rounded-lg",
+                        accent === "orange"
+                          ? "bg-orange-100 text-orange-600"
+                          : "bg-sky-100 text-sky-700"
+                      )}
+                    >
+                      <Icon className="size-5" aria-hidden />
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-950">
+                        {title}
+                      </span>
+                      <span className="mt-1 block text-sm leading-6 text-slate-600">
+                        {description}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="grid grid-cols-3 gap-3 border-t border-slate-200 pt-4 text-center">
+                <div>
+                  <p className="text-lg font-semibold text-slate-950">3</p>
+                  <p className="text-xs text-slate-500">focus areas</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-slate-950">1</p>
+                  <p className="text-xs text-slate-500">shared shell</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-slate-950">0</p>
+                  <p className="text-xs text-slate-500">dark flash</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section id="capabilities" className="px-4 py-20 sm:px-6 sm:py-28">
+      <section id="capabilities" className="px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto w-full max-w-7xl">
           <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
             <div>
@@ -106,7 +164,7 @@ export default function HomePage() {
           <ul role="list" className="mt-12 grid gap-5 lg:grid-cols-3">
             {capabilities.map(({ title, description, icon: Icon, accent }) => (
               <li key={title} role="listitem">
-                <Card className="h-full gap-0 rounded-lg border-0 bg-white py-0 shadow-[0_22px_70px_-38px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/80 transition-transform duration-300 hover:-translate-y-1">
+                <Card className="h-full gap-0 rounded-lg border-0 bg-white py-0 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.5)] ring-1 ring-slate-200/80 transition-transform duration-300 hover:-translate-y-1">
                   <CardContent className="p-7 sm:p-8">
                     <span
                       className={cn(
@@ -131,7 +189,7 @@ export default function HomePage() {
       </section>
 
       <section id="principles" className="px-4 pb-6 sm:px-6 sm:pb-8">
-        <div className="mx-auto w-full max-w-7xl overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="mx-auto w-full max-w-7xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_18px_55px_-44px_rgba(15,23,42,0.45)]">
           <div className="grid lg:grid-cols-[0.72fr_1.28fr]">
             <div className="border-b border-slate-200 bg-slate-50 p-8 sm:p-12 lg:border-r lg:border-b-0">
               <p className="text-sm font-bold text-brand-blue-deep uppercase">
