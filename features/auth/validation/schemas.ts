@@ -11,6 +11,10 @@ import {
 const email = z.string().trim().email("Enter a valid company email.").toLowerCase();
 const requiredText = (fieldName: string) =>
   z.string().trim().min(1, `${fieldName} is required.`);
+const formBoolean = z.preprocess(
+  (value) => value === true || value === "true" || value === "on",
+  z.boolean()
+);
 const password = z
   .string()
   .min(12, "Password must be at least 12 characters.")
@@ -87,6 +91,56 @@ export const productAccessSchema = z
     productKey: z.enum(productKeys),
     productRole: z.string().trim().min(1, "Product role is required."),
     launchAccessEnabled: z.boolean().default(false),
+  })
+  .superRefine((value, context) => {
+    const productRoles = productRolesByProduct[value.productKey as ProductKey];
+
+    if (!(productRoles as readonly string[]).includes(value.productRole)) {
+      context.addIssue({
+        code: "custom",
+        path: ["productRole"],
+      message: "Product role is invalid for this product.",
+      });
+    }
+  });
+
+export const adminCreateEmployeeSchema = z.object({
+  companyEmail: email,
+  personalEmail: z.string().trim().email("Enter a valid personal email.").toLowerCase(),
+  firstName: requiredText("First name"),
+  middleName: z.string().trim().optional(),
+  lastName: requiredText("Last name"),
+  phone: requiredText("Phone"),
+  githubUrl,
+  globalRole: z.enum(employeeGlobalRoles).default("employee"),
+  status: z.enum(employeeStatuses).default("pending"),
+});
+
+export const adminUpdateEmployeeIdentitySchema = z.object({
+  employeeAccountId: z.string().uuid("Employee account ID is invalid."),
+  companyEmail: email,
+  personalEmail: z.string().trim().email("Enter a valid personal email.").toLowerCase(),
+  firstName: requiredText("First name"),
+  middleName: z.string().trim().optional(),
+  lastName: requiredText("Last name"),
+  phone: requiredText("Phone"),
+  githubUrl,
+});
+
+export const adminUpdateEmployeeRoleStatusSchema = z.object({
+  employeeAccountId: z.string().uuid("Employee account ID is invalid."),
+  globalRole: z.enum(employeeGlobalRoles),
+  status: z.enum(employeeStatuses),
+  confirmation: z.string().trim().optional(),
+});
+
+export const adminUpdateProductAccessSchema = z
+  .object({
+    employeeAccountId: z.string().uuid("Employee account ID is invalid."),
+    productKey: z.enum(productKeys),
+    productRole: z.string().trim().min(1, "Product role is required."),
+    launchAccessEnabled: formBoolean.default(false),
+    confirmation: z.string().trim().optional(),
   })
   .superRefine((value, context) => {
     const productRoles = productRolesByProduct[value.productKey as ProductKey];

@@ -12,6 +12,9 @@ export const metadata: Metadata = {
 
 export default async function PortalPage() {
   const session = await requireEmployeeSession();
+  const isAdmin =
+    session.employee.globalRole === "owner" ||
+    session.employee.globalRole === "system_admin";
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
@@ -47,6 +50,14 @@ export default async function PortalPage() {
           >
             Manage account security
           </Link>
+          {isAdmin ? (
+            <Link
+              href="/portal/admin/employees"
+              className="ml-5 mt-5 inline-flex text-sm font-semibold text-sky-700"
+            >
+              Manage employees
+            </Link>
+          ) : null}
         </section>
       </div>
     </main>

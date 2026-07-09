@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, count, eq, isNull, ne } from "drizzle-orm";
 
 import { hashToken } from "@/lib/auth/tokens";
 import { getDb } from "@/lib/db";
@@ -45,10 +45,28 @@ export type ProductAccess = {
   updatedAt: Date;
 };
 
+export type EmployeeWithProductAccess = EmployeeIdentity & {
+  productAccess: ProductAccess[];
+};
+
 export class DuplicateCompanyEmailError extends Error {
   constructor() {
     super("Company email already belongs to an employee account.");
     this.name = "DuplicateCompanyEmailError";
+  }
+}
+
+export class LastActiveOwnerError extends Error {
+  constructor() {
+    super("The last active Owner cannot be demoted, suspended, or terminated.");
+    this.name = "LastActiveOwnerError";
+  }
+}
+
+export class PrivilegeEscalationError extends Error {
+  constructor() {
+    super("Only Owners can create or change administrator roles.");
+    this.name = "PrivilegeEscalationError";
   }
 }
 
@@ -129,6 +147,10 @@ export function canManageEmployees(actor: EmployeeActor): boolean {
   return isEmployeeAdministrator(actor);
 }
 
+export function canManageAdminRoles(actor: EmployeeActor): boolean {
+  return actor.globalRole === "owner";
+}
+
 export function canEmployeeSignIn(
   employee: Pick<EmployeeAccountCredentials, "status" | "emailVerifiedAt">
 ): boolean {
@@ -180,6 +202,163 @@ export async function createEmployeeAccount(input: {
   }
 }
 
+export async function createEmployeeAccountForActor(input: {
+  actor: EmployeeActor;
+  companyEmail: string;
+  personalEmail: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  phone: string;
+  githubUrl: string;
+  passwordHash: string;
+  globalRole: EmployeeGlobalRole;
+  status: EmployeeStatus;
+  verified: boolean;
+}): Promise<EmployeeIdentity | null> {
+  if (!canManageEmployees(input.actor)) {
+    return null;
+  }
+
+  if (isAdministratorRole(input.globalRole) && !canManageAdminRoles(input.actor)) {
+    throw new PrivilegeEscalationError();
+  }
+
+  return createEmployeeAccount(input);
+}
+
+export async function listEmployeesForActor(
+  actor: EmployeeActor
+): Promise<EmployeeWithProductAccess[] | null> {
+  if (!canManageEmployees(actor)) {
+    return null;
+  }
+
+  const rows = await getDb()
+    .select({
+      employee: employeeAccounts,
+      access: employeeProductAccess,
+    })
+    .from(employeeAccounts)
+    .leftJoin(
+      employeeProductAccess,
+      eq(employeeProductAccess.employeeAccountId, employeeAccounts.id)
+    )
+    .orderBy(asc(employeeAccounts.companyEmail));
+
+  return groupEmployeeProductAccess(rows);
+}
+
+export async function findEmployeeDetailForActor(
+  actor: EmployeeActor,
+  employeeAccountId: string
+): Promise<EmployeeWithProductAccess | null> {
+  if (!canManageEmployees(actor)) {
+    return null;
+  }
+
+  const rows = await getDb()
+    .select({
+      employee: employeeAccounts,
+      access: employeeProductAccess,
+    })
+    .from(employeeAccounts)
+    .leftJoin(
+      employeeProductAccess,
+      eq(employeeProductAccess.employeeAccountId, employeeAccounts.id)
+    )
+    .where(eq(employeeAccounts.id, employeeAccountId));
+
+  return groupEmployeeProductAccess(rows)[0] ?? null;
+}
+
+export async function updateEmployeeIdentityForActor(input: {
+  actor: EmployeeActor;
+  employeeAccountId: string;
+  companyEmail: string;
+  personalEmail: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  phone: string;
+  githubUrl: string;
+}): Promise<EmployeeIdentity | null> {
+  if (!canManageEmployees(input.actor)) {
+    return null;
+  }
+
+  try {
+    const [employee] = await getDb()
+      .update(employeeAccounts)
+      .set({
+        companyEmail: normalizeEmail(input.companyEmail),
+        personalEmail: normalizeEmail(input.personalEmail),
+        firstName: input.firstName.trim(),
+        middleName: input.middleName?.trim() || null,
+        lastName: input.lastName.trim(),
+        phone: input.phone.trim(),
+        githubUrl: input.githubUrl.trim(),
+        updatedAt: new Date(),
+      })
+      .where(eq(employeeAccounts.id, input.employeeAccountId))
+      .returning();
+
+    return employee ? toEmployeeIdentity(employee) : null;
+  } catch (error) {
+    if (isUniqueCompanyEmailError(error)) {
+      throw new DuplicateCompanyEmailError();
+    }
+
+    throw error;
+  }
+}
+
+export async function updateEmployeeRoleStatusForActor(input: {
+  actor: EmployeeActor;
+  employeeAccountId: string;
+  globalRole: EmployeeGlobalRole;
+  status: EmployeeStatus;
+}): Promise<EmployeeIdentity | null> {
+  if (!canManageEmployees(input.actor)) {
+    return null;
+  }
+
+  const current = await findEmployeeCredentialsById(input.employeeAccountId);
+
+  if (!current) {
+    return null;
+  }
+
+  if (
+    (isAdministratorRole(current.globalRole) ||
+      isAdministratorRole(input.globalRole)) &&
+    !canManageAdminRoles(input.actor)
+  ) {
+    throw new PrivilegeEscalationError();
+  }
+
+  if (
+    current.globalRole === "owner" &&
+    current.status === "active" &&
+    (input.globalRole !== "owner" || input.status !== "active") &&
+    (await countOtherActiveOwners(input.employeeAccountId)) === 0
+  ) {
+    throw new LastActiveOwnerError();
+  }
+
+  const [employee] = await getDb()
+    .update(employeeAccounts)
+    .set({
+      globalRole: input.globalRole,
+      status: input.status,
+      updatedAt: new Date(),
+    })
+    .where(eq(employeeAccounts.id, input.employeeAccountId))
+    .returning();
+
+  return employee ? toEmployeeIdentity(employee) : null;
+}
+
 export async function updateEmployeeStatus(input: {
   actor: EmployeeActor;
   employeeAccountId: string;
@@ -189,13 +368,18 @@ export async function updateEmployeeStatus(input: {
     return null;
   }
 
-  const [employee] = await getDb()
-    .update(employeeAccounts)
-    .set({ status: input.status, updatedAt: new Date() })
-    .where(eq(employeeAccounts.id, input.employeeAccountId))
-    .returning();
+  const current = await findEmployeeCredentialsById(input.employeeAccountId);
 
-  return employee ? toEmployeeIdentity(employee) : null;
+  if (!current) {
+    return null;
+  }
+
+  return updateEmployeeRoleStatusForActor({
+    actor: input.actor,
+    employeeAccountId: input.employeeAccountId,
+    globalRole: current.globalRole,
+    status: input.status,
+  });
 }
 
 export async function assignEmployeeProductAccess(input: {
@@ -416,6 +600,50 @@ function toProductAccess(
     createdAt: access.createdAt,
     updatedAt: access.updatedAt,
   };
+}
+
+function groupEmployeeProductAccess(
+  rows: {
+    employee: EmployeeAccountCredentials;
+    access: typeof employeeProductAccess.$inferSelect | null;
+  }[]
+): EmployeeWithProductAccess[] {
+  const employees = new Map<string, EmployeeWithProductAccess>();
+
+  for (const row of rows) {
+    const existing =
+      employees.get(row.employee.id) ?? {
+        ...toEmployeeIdentity(row.employee),
+        productAccess: [],
+      };
+
+    if (row.access) {
+      existing.productAccess.push(toProductAccess(row.access));
+    }
+
+    employees.set(row.employee.id, existing);
+  }
+
+  return [...employees.values()];
+}
+
+async function countOtherActiveOwners(employeeAccountId: string): Promise<number> {
+  const [row] = await getDb()
+    .select({ value: count() })
+    .from(employeeAccounts)
+    .where(
+      and(
+        eq(employeeAccounts.globalRole, "owner"),
+        eq(employeeAccounts.status, "active"),
+        ne(employeeAccounts.id, employeeAccountId)
+      )
+    );
+
+  return row?.value ?? 0;
+}
+
+function isAdministratorRole(role: EmployeeGlobalRole): boolean {
+  return role === "owner" || role === "system_admin";
 }
 
 function isUniqueCompanyEmailError(error: unknown): boolean {
