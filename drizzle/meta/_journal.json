@@ -15,6 +15,13 @@
       "when": 1783583445388,
       "tag": "0001_solid_natasha_romanoff",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783590000000,
+      "tag": "0002_security_audit_events",
+      "breakpoints": true
     }
   ]
 }

@@ -6,10 +6,22 @@ const mocks = vi.hoisted(() => ({
   assignEmployeeProductAccess: vi.fn(),
   createEmployeeAccountForActor: vi.fn(),
   findEmployeeDetailForActor: vi.fn(),
+  getDb: vi.fn(),
   hashPassword: vi.fn(),
   listEmployeesForActor: vi.fn(),
+  logDeniedPrivilegedAuditAttempt: vi.fn(),
+  recordPrivilegedAuditEvent: vi.fn(),
   updateEmployeeIdentityForActor: vi.fn(),
   updateEmployeeRoleStatusForActor: vi.fn(),
+}));
+
+vi.mock("@/lib/db", () => ({
+  getDb: mocks.getDb,
+}));
+
+vi.mock("@/features/auth/services/audit-events", () => ({
+  logDeniedPrivilegedAuditAttempt: mocks.logDeniedPrivilegedAuditAttempt,
+  recordPrivilegedAuditEvent: mocks.recordPrivilegedAuditEvent,
 }));
 
 vi.mock("@/features/auth/services/employee-repository", async () => {
@@ -35,6 +47,7 @@ vi.mock("@/lib/auth/password", () => ({
 
 import {
   createEmployeeAdminService,
+  updateEmployeeIdentityAdminService,
   updateEmployeeProductAccessAdminService,
   updateEmployeeRoleStatusAdminService,
 } from "@/features/auth/services/admin-employees";
@@ -43,6 +56,8 @@ import {
 } from "@/features/auth/services/employee-repository";
 
 const actor = { id: "owner-1", globalRole: "owner" as const };
+const requestContext = { clientIp: "local", userAgentHash: null };
+const transaction = { transaction: true };
 const employeeId = "00000000-0000-4000-8000-000000000001";
 const employee = {
   id: employeeId,
@@ -64,23 +79,31 @@ const employee = {
 describe("admin employee services", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.getDb.mockReturnValue({
+      transaction: vi.fn(async (callback) => callback(transaction)),
+    });
     mocks.hashPassword.mockResolvedValue("hashed-password");
+    mocks.recordPrivilegedAuditEvent.mockResolvedValue({});
   });
 
   it("creates an employee with a generated temporary password hash", async () => {
     mocks.createEmployeeAccountForActor.mockResolvedValue(employee);
 
-    const result = await createEmployeeAdminService(actor, {
-      companyEmail: " Employee@Example.com ",
-      personalEmail: " Personal@Example.com ",
-      firstName: " Employee ",
-      middleName: "",
-      lastName: " Example ",
-      phone: " 555-0100 ",
-      githubUrl: " https://github.com/employee ",
-      globalRole: "employee",
-      status: "active",
-    });
+    const result = await createEmployeeAdminService(
+      actor,
+      {
+        companyEmail: " Employee@Example.com ",
+        personalEmail: " Personal@Example.com ",
+        firstName: " Employee ",
+        middleName: "",
+        lastName: " Example ",
+        phone: " 555-0100 ",
+        githubUrl: " https://github.com/employee ",
+        globalRole: "employee",
+        status: "active",
+      },
+      requestContext
+    );
 
     expect(result.success).toBe(true);
     expect(result.temporaryPassword).toEqual(expect.any(String));
@@ -95,7 +118,21 @@ describe("admin employee services", () => {
         middleName: "",
         passwordHash: "hashed-password",
         verified: true,
-      })
+      }),
+      transaction
+    );
+    expect(mocks.recordPrivilegedAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actor,
+        action: "employee.create",
+        outcome: "success",
+        targetEmployeeAccountId: employee.id,
+        requestContext,
+      }),
+      transaction
+    );
+    expect(JSON.stringify(mocks.recordPrivilegedAuditEvent.mock.calls)).not.toContain(
+      result.temporaryPassword
     );
   });
 
@@ -111,7 +148,8 @@ describe("admin employee services", () => {
         githubUrl: "https://github.com/employee",
         globalRole: "owner",
         status: "active",
-      }
+      },
+      requestContext
     );
 
     expect(result).toEqual({
@@ -120,6 +158,12 @@ describe("admin employee services", () => {
     });
     expect(mocks.hashPassword).not.toHaveBeenCalled();
     expect(mocks.createEmployeeAccountForActor).not.toHaveBeenCalled();
+    expect(mocks.logDeniedPrivilegedAuditAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "employee.create",
+        reason: "actor_cannot_manage_admin_roles",
+      })
+    );
   });
 
   it("does not hash temporary passwords for forbidden employee create attempts", async () => {
@@ -134,7 +178,8 @@ describe("admin employee services", () => {
         githubUrl: "https://github.com/employee",
         globalRole: "employee",
         status: "active",
-      }
+      },
+      requestContext
     );
 
     expect(result).toEqual({
@@ -143,6 +188,12 @@ describe("admin employee services", () => {
     });
     expect(mocks.hashPassword).not.toHaveBeenCalled();
     expect(mocks.createEmployeeAccountForActor).not.toHaveBeenCalled();
+    expect(mocks.logDeniedPrivilegedAuditAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "employee.create",
+        reason: "actor_cannot_manage_employees",
+      })
+    );
   });
 
   it("requires confirmation for high-impact role and status changes", async () => {
@@ -152,11 +203,15 @@ describe("admin employee services", () => {
       status: "active",
     });
 
-    const result = await updateEmployeeRoleStatusAdminService(actor, {
-      employeeAccountId: employeeId,
-      globalRole: "employee",
-      status: "suspended",
-    });
+    const result = await updateEmployeeRoleStatusAdminService(
+      actor,
+      {
+        employeeAccountId: employeeId,
+        globalRole: "employee",
+        status: "suspended",
+      },
+      requestContext
+    );
 
     expect(result.success).toBe(false);
     expect(result.fieldErrors?.confirmation).toContain("CONFIRM");
@@ -173,17 +228,82 @@ describe("admin employee services", () => {
       new LastActiveOwnerError()
     );
 
-    const result = await updateEmployeeRoleStatusAdminService(actor, {
-      employeeAccountId: employeeId,
-      globalRole: "employee",
-      status: "active",
-      confirmation: "CONFIRM",
-    });
+    const result = await updateEmployeeRoleStatusAdminService(
+      actor,
+      {
+        employeeAccountId: employeeId,
+        globalRole: "employee",
+        status: "active",
+        confirmation: "CONFIRM",
+      },
+      requestContext
+    );
 
     expect(result).toEqual({
       success: false,
       error: "The last active Owner cannot be demoted, suspended, or terminated.",
     });
+  });
+
+  it("records safe before and after details for employee identity updates", async () => {
+    mocks.findEmployeeDetailForActor.mockResolvedValue(employee);
+    mocks.updateEmployeeIdentityForActor.mockResolvedValue({
+      ...employee,
+      companyEmail: "updated@example.com",
+      firstName: "Updated",
+    });
+
+    const result = await updateEmployeeIdentityAdminService(
+      actor,
+      {
+        employeeAccountId: employeeId,
+        companyEmail: "updated@example.com",
+        personalEmail: "personal@example.com",
+        firstName: "Updated",
+        lastName: "Example",
+        phone: "555-0100",
+        githubUrl: "https://github.com/employee",
+      },
+      requestContext
+    );
+
+    expect(result).toEqual({
+      success: true,
+      message: "Employee identity updated.",
+    });
+    expect(mocks.recordPrivilegedAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "employee.identity.update",
+        details: {
+          before: expect.objectContaining({ companyEmail: "employee@example.com" }),
+          after: expect.objectContaining({ companyEmail: "updated@example.com" }),
+        },
+      }),
+      transaction
+    );
+  });
+
+  it("fails closed when a privileged mutation audit write fails", async () => {
+    mocks.findEmployeeDetailForActor.mockResolvedValue(employee);
+    mocks.updateEmployeeIdentityForActor.mockResolvedValue(employee);
+    mocks.recordPrivilegedAuditEvent.mockRejectedValue(new Error("audit failed"));
+
+    await expect(
+      updateEmployeeIdentityAdminService(
+        actor,
+        {
+          employeeAccountId: employeeId,
+          companyEmail: "employee@example.com",
+          personalEmail: "personal@example.com",
+          firstName: "Employee",
+          lastName: "Example",
+          phone: "555-0100",
+          githubUrl: "https://github.com/employee",
+        },
+        requestContext
+      )
+    ).rejects.toThrow("audit failed");
+    expect(mocks.getDb().transaction).toHaveBeenCalledOnce();
   });
 
   it("requires confirmation before disabling product launch access", async () => {
@@ -201,11 +321,15 @@ describe("admin employee services", () => {
       ],
     });
 
-    const result = await updateEmployeeProductAccessAdminService(actor, {
-      employeeAccountId: employeeId,
-      productKey: "kvisa_assistant",
-      productRole: "reviewer",
-    });
+    const result = await updateEmployeeProductAccessAdminService(
+      actor,
+      {
+        employeeAccountId: employeeId,
+        productKey: "kvisa_assistant",
+        productRole: "reviewer",
+      },
+      requestContext
+    );
 
     expect(result.success).toBe(false);
     expect(result.fieldErrors?.confirmation).toContain("CONFIRM");

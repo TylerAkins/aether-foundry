@@ -79,3 +79,22 @@ export async function getAuthClientIp(): Promise<string> {
 
   return hashFallback(directPeer ?? headerStore.get("user-agent") ?? "unknown");
 }
+
+export async function getAuditRequestContext(): Promise<{
+  clientIp: string;
+  userAgentHash: string | null;
+}> {
+  const clientIp = await getAuthClientIp();
+
+  if (appEnv.APP_ENV === "local" || appEnv.APP_ENV === "test") {
+    return { clientIp, userAgentHash: null };
+  }
+
+  const headerStore = await headers();
+  const userAgent = headerStore.get("user-agent");
+
+  return {
+    clientIp,
+    userAgentHash: userAgent ? hashFallback(userAgent) : null,
+  };
+}
