@@ -1,6 +1,10 @@
 import "server-only";
 
-import { canEmployeeLaunchProduct } from "@/features/auth/services/employee-repository";
+import { findEmployeeProductLaunchAuthorization } from "@/features/auth/services/employee-repository";
+import {
+  appendKVisaLaunchToken,
+  signKVisaAssistantLaunchToken,
+} from "@/lib/products/kvisa-launch-token";
 import {
   getRegisteredProduct,
   productRegistry,
@@ -10,7 +14,12 @@ import {
 import { isProductKey } from "@/lib/products/definitions";
 
 export type ProductLaunchResult =
-  | { status: "launchable"; product: RegisteredProduct; launchUrl: string }
+  | {
+      status: "launchable";
+      product: RegisteredProduct;
+      launchUrl: string;
+      launchToken: string;
+    }
   | { status: "unknown" }
   | { status: "disabled"; product: RegisteredProduct }
   | { status: "unauthorized"; product: RegisteredProduct };
@@ -31,18 +40,32 @@ export async function getEmployeeProductLaunch(input: {
     return { status: "disabled", product };
   }
 
-  const canLaunch = await canEmployeeLaunchProduct({
+  const authorization = await findEmployeeProductLaunchAuthorization({
     employeeAccountId: input.employeeAccountId,
     productKey: product.key,
   });
 
-  if (!canLaunch) {
+  if (!authorization) {
     return { status: "unauthorized", product };
   }
+
+  const launchToken = await signKVisaAssistantLaunchToken({
+    employee: {
+      id: authorization.employee.id,
+      companyEmail: authorization.employee.companyEmail,
+      firstName: authorization.employee.firstName,
+      middleName: authorization.employee.middleName,
+      lastName: authorization.employee.lastName,
+      globalRole: authorization.employee.globalRole,
+    },
+    productKey: product.key,
+    productRole: authorization.productRole,
+  });
 
   return {
     status: "launchable",
     product,
-    launchUrl: product.launchUrl,
+    launchUrl: appendKVisaLaunchToken(product.launchUrl, launchToken),
+    launchToken,
   };
 }

@@ -17,12 +17,25 @@ vi.mock("@/lib/env/app", () => ({
 }));
 
 const mocks = vi.hoisted(() => ({
-  canEmployeeLaunchProduct: vi.fn(),
+  findEmployeeProductLaunchAuthorization: vi.fn(),
+  signKVisaAssistantLaunchToken: vi.fn(),
 }));
 
 vi.mock("@/features/auth/services/employee-repository", () => ({
-  canEmployeeLaunchProduct: mocks.canEmployeeLaunchProduct,
+  findEmployeeProductLaunchAuthorization: mocks.findEmployeeProductLaunchAuthorization,
 }));
+
+vi.mock("@/lib/products/kvisa-launch-token", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/products/kvisa-launch-token")>(
+      "@/lib/products/kvisa-launch-token"
+    );
+
+  return {
+    ...actual,
+    signKVisaAssistantLaunchToken: mocks.signKVisaAssistantLaunchToken,
+  };
+});
 
 import { getEmployeeProductLaunch } from "@/lib/products/launcher";
 import { createProductRegistry } from "@/lib/products/registry";
@@ -39,10 +52,21 @@ const disabledRegistry = createProductRegistry({
 describe("product launcher", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.signKVisaAssistantLaunchToken.mockResolvedValue("signed-launch-token");
   });
 
-  it("authorizes an assigned employee when the product is enabled", async () => {
-    mocks.canEmployeeLaunchProduct.mockResolvedValue(true);
+  it("authorizes an assigned employee and appends a signed launch token", async () => {
+    mocks.findEmployeeProductLaunchAuthorization.mockResolvedValue({
+      employee: {
+        id: "employee-1",
+        companyEmail: "employee@example.com",
+        firstName: "Employee",
+        middleName: null,
+        lastName: "Example",
+        globalRole: "employee",
+      },
+      productRole: "reviewer",
+    });
 
     await expect(
       getEmployeeProductLaunch({
@@ -53,12 +77,56 @@ describe("product launcher", () => {
     ).resolves.toEqual({
       status: "launchable",
       product: enabledRegistry.kvisa_assistant,
-      launchUrl: "http://localhost:3001",
+      launchUrl: "http://localhost:3001/?launch_token=signed-launch-token",
+      launchToken: "signed-launch-token",
+    });
+    expect(mocks.signKVisaAssistantLaunchToken).toHaveBeenCalledWith({
+      employee: {
+        id: "employee-1",
+        companyEmail: "employee@example.com",
+        firstName: "Employee",
+        middleName: null,
+        lastName: "Example",
+        globalRole: "employee",
+      },
+      productKey: "kvisa_assistant",
+      productRole: "reviewer",
     });
   });
 
+  it("preserves product launch URL query params when adding the token", async () => {
+    const registry = createProductRegistry({
+      KVISA_ASSISTANT_ENABLED: true,
+      KVISA_ASSISTANT_LAUNCH_URL: "http://localhost:3001/start?source=portal",
+    });
+    mocks.findEmployeeProductLaunchAuthorization.mockResolvedValue({
+      employee: {
+        id: "employee-1",
+        companyEmail: "employee@example.com",
+        firstName: "Employee",
+        middleName: null,
+        lastName: "Example",
+        globalRole: "employee",
+      },
+      productRole: "reviewer",
+    });
+
+    await expect(
+      getEmployeeProductLaunch({
+        employeeAccountId: "employee-1",
+        productKey: "kvisa_assistant",
+        registry,
+      })
+    ).resolves.toEqual(
+      expect.objectContaining({
+        launchUrl:
+          "http://localhost:3001/start?source=portal&launch_token=signed-launch-token",
+      })
+    );
+  });
+
   it("rejects employees without product access", async () => {
-    mocks.canEmployeeLaunchProduct.mockResolvedValue(false);
+    mocks.findEmployeeProductLaunchAuthorization.mockResolvedValue(null);
 
     await expect(
       getEmployeeProductLaunch({
@@ -70,6 +138,7 @@ describe("product launcher", () => {
       status: "unauthorized",
       product: enabledRegistry.kvisa_assistant,
     });
+    expect(mocks.signKVisaAssistantLaunchToken).not.toHaveBeenCalled();
   });
 
   it("rejects disabled products before checking employee assignment", async () => {
@@ -83,7 +152,8 @@ describe("product launcher", () => {
       status: "disabled",
       product: disabledRegistry.kvisa_assistant,
     });
-    expect(mocks.canEmployeeLaunchProduct).not.toHaveBeenCalled();
+    expect(mocks.findEmployeeProductLaunchAuthorization).not.toHaveBeenCalled();
+    expect(mocks.signKVisaAssistantLaunchToken).not.toHaveBeenCalled();
   });
 
   it("rejects unknown product keys", async () => {

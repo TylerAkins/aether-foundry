@@ -48,6 +48,11 @@ export type EmployeeWithProductAccess = EmployeeIdentity & {
   productAccess: ProductAccess[];
 };
 
+export type EmployeeProductLaunchAuthorization = {
+  employee: EmployeeIdentity;
+  productRole: ProductRole;
+};
+
 export class DuplicateCompanyEmailError extends Error {
   constructor() {
     super("Company email already belongs to an employee account.");
@@ -459,10 +464,17 @@ export async function canEmployeeLaunchProduct(input: {
   productKey: ProductKey;
   allowedRoles?: readonly ProductRole[];
 }): Promise<boolean> {
+  return Boolean(await findEmployeeProductLaunchAuthorization(input));
+}
+
+export async function findEmployeeProductLaunchAuthorization(input: {
+  employeeAccountId: string;
+  productKey: ProductKey;
+  allowedRoles?: readonly ProductRole[];
+}): Promise<EmployeeProductLaunchAuthorization | null> {
   const [row] = await getDb()
     .select({
-      status: employeeAccounts.status,
-      emailVerifiedAt: employeeAccounts.emailVerifiedAt,
+      employee: employeeAccounts,
       productRole: employeeProductAccess.productRole,
       launchAccessEnabled: employeeProductAccess.launchAccessEnabled,
     })
@@ -479,13 +491,21 @@ export async function canEmployeeLaunchProduct(input: {
     )
     .limit(1);
 
-  if (!row || !canEmployeeSignIn(row) || !row.launchAccessEnabled) {
-    return false;
+  if (!row || !canEmployeeSignIn(row.employee) || !row.launchAccessEnabled) {
+    return null;
   }
 
-  return input.allowedRoles
-    ? (input.allowedRoles as readonly string[]).includes(row.productRole)
-    : true;
+  if (
+    input.allowedRoles &&
+    !(input.allowedRoles as readonly string[]).includes(row.productRole)
+  ) {
+    return null;
+  }
+
+  return {
+    employee: toEmployeeIdentity(row.employee),
+    productRole: row.productRole as ProductRole,
+  };
 }
 
 export async function createEmailVerificationToken(input: {

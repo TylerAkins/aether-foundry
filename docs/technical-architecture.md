@@ -259,6 +259,92 @@ Products never create employee accounts.
 
 Future products authenticate employees through Aether Foundry.
 
+---
+
+# KVisaAssistant Launch Token Contract
+
+KVisaAssistant employee launches use a short-lived signed JWT. Aether Foundry
+keeps employee sessions and databases private, authorizes product access
+server-side, signs a launch token, and redirects employees to KVisaAssistant
+with `launch_token` in the query string.
+
+## Version
+
+- Contract version: `kvisa_launch_v1`
+- Signing algorithm: `RS256`
+- Issuer: Aether Foundry `APP_URL`
+- Audience: `kvisa_assistant`
+- Lifetime: 2 minutes
+- Maximum consumer clock skew: 30 seconds
+
+## Claims
+
+Required registered claims:
+
+- `iss`: Aether Foundry issuer URL
+- `aud`: `kvisa_assistant`
+- `sub`: employee account id
+- `iat`: issued-at timestamp
+- `exp`: expiration timestamp
+- `jti`: unique launch token id
+
+Required private claims:
+
+- `contractVersion`: `kvisa_launch_v1`
+- `employee.id`
+- `employee.companyEmail`
+- `employee.firstName`
+- `employee.middleName`
+- `employee.lastName`
+- `employee.globalRole`
+- `productKey`: `kvisa_assistant`
+- `productRole`: assigned KVisaAssistant product role
+
+## Key Distribution
+
+Consumers fetch public keys from:
+
+```text
+/api/products/kvisa-assistant/launch-token/jwks
+```
+
+The JWKS contains the active public signing key and any previous public keys
+kept for rotation. Aether Foundry never returns or sends private key material to
+clients or product applications.
+
+## Consumer Validation
+
+KVisaAssistant must reject tokens unless all checks pass:
+
+- `alg` is `RS256`
+- `kid` resolves to a known JWKS key
+- `iss`, `aud`, `sub`, `iat`, `exp`, `jti`, and `contractVersion` are present
+- `aud` equals `kvisa_assistant`
+- `contractVersion` equals `kvisa_launch_v1`
+- `exp` is unexpired, allowing no more than 30 seconds of clock skew
+- `iat` is not unreasonably in the future, allowing no more than 30 seconds of clock skew
+
+KVisaAssistant must treat launch tokens as one-time use. Store accepted `jti`
+values until token expiration plus clock skew, and reject any replayed `jti`.
+Modified signatures, expired tokens, wrong-audience tokens, unknown-key tokens,
+and replayed tokens must fail closed.
+
+## Rotation
+
+Key rotation is intentionally staged so products do not require all-at-once
+deployments:
+
+1. Generate a new PKCS#8 RSA private key and key id.
+2. Configure Aether Foundry with the new private key and `kid`.
+3. Keep old public keys in `KVISA_ASSISTANT_LAUNCH_TOKEN_PREVIOUS_PUBLIC_JWKS`.
+4. Let KVisaAssistant refresh JWKS by `kid`.
+5. Remove old public keys only after the consumer JWKS cache TTL, token lifetime,
+   and clock-skew window have elapsed.
+
+If validation fails, KVisaAssistant should show a sanitized sign-in or launch
+failure message and must not call back into Aether Foundry databases or depend
+on Aether Foundry session cookies.
+
 Customer authentication remains within each product.
 
 ---

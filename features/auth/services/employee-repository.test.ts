@@ -324,8 +324,7 @@ describe("employee repository", () => {
   it("evaluates product launch access independently from global roles", async () => {
     mockLaunchRows([
       {
-        status: "active",
-        emailVerifiedAt: new Date(),
+        employee: credentialRow,
         productRole: "reviewer",
         launchAccessEnabled: true,
       },
@@ -341,8 +340,7 @@ describe("employee repository", () => {
 
     mockLaunchRows([
       {
-        status: "active",
-        emailVerifiedAt: new Date(),
+        employee: credentialRow,
         productRole: "support",
         launchAccessEnabled: true,
       },
@@ -355,6 +353,117 @@ describe("employee repository", () => {
         allowedRoles: ["reviewer"],
       })
     ).resolves.toBe(false);
+  });
+
+  it("returns launch employee identity and product role after authorization", async () => {
+    mockLaunchRows([
+      {
+        employee: credentialRow,
+        productRole: "reviewer",
+        launchAccessEnabled: true,
+      },
+    ]);
+
+    await expect(
+      repository.findEmployeeProductLaunchAuthorization({
+        employeeAccountId: "employee-1",
+        productKey: "kvisa_assistant",
+      })
+    ).resolves.toEqual({
+      employee: {
+        id: "employee-1",
+        companyEmail: "employee@example.com",
+        personalEmail: "personal@example.com",
+        firstName: "Employee",
+        middleName: null,
+        lastName: "Example",
+        phone: "555-0100",
+        githubUrl: "https://github.com/employee",
+        globalRole: "employee",
+        status: "active",
+        emailVerifiedAt: credentialRow.emailVerifiedAt,
+        createdAt,
+        updatedAt,
+      },
+      productRole: "reviewer",
+    });
+  });
+
+  it.each(["pending", "suspended", "terminated"] as const)(
+    "denies %s employees launch authorization",
+    async (status) => {
+      mockLaunchRows([
+        {
+          employee: { ...credentialRow, status },
+          productRole: "reviewer",
+          launchAccessEnabled: true,
+        },
+      ]);
+
+      await expect(
+        repository.findEmployeeProductLaunchAuthorization({
+          employeeAccountId: "employee-1",
+          productKey: "kvisa_assistant",
+        })
+      ).resolves.toBeNull();
+    }
+  );
+
+  it("denies unverified, missing, role-disallowed, and launch-disabled employees", async () => {
+    mockLaunchRows([
+      {
+        employee: { ...credentialRow, emailVerifiedAt: null },
+        productRole: "reviewer",
+        launchAccessEnabled: true,
+      },
+    ]);
+
+    await expect(
+      repository.findEmployeeProductLaunchAuthorization({
+        employeeAccountId: "employee-1",
+        productKey: "kvisa_assistant",
+      })
+    ).resolves.toBeNull();
+
+    mockLaunchRows([]);
+
+    await expect(
+      repository.findEmployeeProductLaunchAuthorization({
+        employeeAccountId: "employee-1",
+        productKey: "kvisa_assistant",
+      })
+    ).resolves.toBeNull();
+
+    mockLaunchRows([
+      {
+        employee: credentialRow,
+        productRole: "support",
+        launchAccessEnabled: true,
+      },
+    ]);
+
+    await expect(
+      repository.findEmployeeProductLaunchAuthorization({
+        employeeAccountId: "employee-1",
+        productKey: "kvisa_assistant",
+        allowedRoles: ["reviewer"],
+      })
+    ).resolves.toBeNull();
+
+    mockLaunchRows([
+      {
+        employee: credentialRow,
+        productRole: "reviewer",
+        launchAccessEnabled: false,
+      },
+    ]);
+
+    await expect(
+      repository.findEmployeeProductLaunchAuthorization({
+        employeeAccountId: "employee-1",
+        productKey: "kvisa_assistant",
+      })
+    ).resolves.toBeNull();
   });
 });
 

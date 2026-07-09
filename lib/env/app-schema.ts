@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 const appEnvValues = ["local", "production", "test"] as const;
+const pkcs8PrivateKeyHeader = "-----BEGIN PRIVATE KEY-----";
+const privateKeyFooter = "-----END PRIVATE KEY-----";
 
 const optionalTrimmedString = z
   .string()
@@ -11,6 +13,32 @@ const envBoolean = z
   .enum(["true", "false"])
   .default("false")
   .transform((value) => value === "true");
+const publicJwksSchema = z.object({
+  keys: z.array(
+    z
+      .object({
+        kid: z.string().trim().min(1),
+        kty: z.string().trim().min(1),
+      })
+      .passthrough()
+      .refine((key) => !("d" in key), "Previous public JWKS must not include private key material.")
+  ),
+});
+const optionalPublicJwks = optionalTrimmedString.transform((value) => {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    return publicJwksSchema.parse(JSON.parse(value));
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error(error.issues[0]?.message ?? "KVisaAssistant previous public JWKS is invalid.");
+    }
+
+    throw new Error("KVisaAssistant previous public JWKS must be valid JSON.");
+  }
+});
 
 const appEnvSchema = z.object({
   APP_ENV: z.enum(appEnvValues).default("local"),
@@ -53,6 +81,22 @@ const appEnvSchema = z.object({
     },
     "KVISA_ASSISTANT_LAUNCH_URL must be a valid HTTP(S) URL."
   ),
+  KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY: optionalTrimmedString.refine(
+    (value) => {
+      if (!value) {
+        return true;
+      }
+
+      const privateKey = normalizePem(value);
+      return (
+        privateKey.startsWith(pkcs8PrivateKeyHeader) &&
+        privateKey.includes(privateKeyFooter)
+      );
+    },
+    "KVisaAssistant launch token private key must be a PKCS#8 PEM private key."
+  ),
+  KVISA_ASSISTANT_LAUNCH_TOKEN_KEY_ID: optionalTrimmedString,
+  KVISA_ASSISTANT_LAUNCH_TOKEN_PREVIOUS_PUBLIC_JWKS: optionalPublicJwks,
 });
 
 export type AppEnv = z.infer<typeof appEnvSchema>;
@@ -81,9 +125,31 @@ export function parseAppEnv(env: Record<string, string | undefined>): AppEnv {
     );
   }
 
+  if (
+    parsed.data.KVISA_ASSISTANT_ENABLED &&
+    !parsed.data.KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY
+  ) {
+    throw new Error(
+      "KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY is required when KVISA_ASSISTANT_ENABLED=true."
+    );
+  }
+
+  if (
+    parsed.data.KVISA_ASSISTANT_ENABLED &&
+    !parsed.data.KVISA_ASSISTANT_LAUNCH_TOKEN_KEY_ID
+  ) {
+    throw new Error(
+      "KVISA_ASSISTANT_LAUNCH_TOKEN_KEY_ID is required when KVISA_ASSISTANT_ENABLED=true."
+    );
+  }
+
   return parsed.data;
 }
 
 export function isProductionEnv(appEnv: AppEnv["APP_ENV"]): boolean {
   return appEnv === "production";
+}
+
+function normalizePem(value: string): string {
+  return value.replaceAll("\\n", "\n").trim();
 }
