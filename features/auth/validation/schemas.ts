@@ -127,6 +127,12 @@ export const adminUpdateEmployeeIdentitySchema = z.object({
   githubUrl,
 });
 
+export const selfUpdateEmployeeProfileSchema = z.object({
+  personalEmail: z.string().trim().email("Enter a valid personal email.").toLowerCase(),
+  phone: requiredText("Phone"),
+  githubUrl,
+});
+
 export const adminUpdateEmployeeRoleStatusSchema = z.object({
   employeeAccountId: z.string().uuid("Employee account ID is invalid."),
   globalRole: z.enum(employeeGlobalRoles),

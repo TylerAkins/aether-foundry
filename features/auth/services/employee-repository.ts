@@ -272,6 +272,24 @@ export async function findEmployeeDetailForActor(
   return groupEmployeeProductAccess(rows)[0] ?? null;
 }
 
+export async function findOwnEmployeeWithProductAccess(
+  employeeAccountId: string
+): Promise<EmployeeWithProductAccess | null> {
+  const rows = await getDb()
+    .select({
+      employee: employeeAccounts,
+      access: employeeProductAccess,
+    })
+    .from(employeeAccounts)
+    .leftJoin(
+      employeeProductAccess,
+      eq(employeeProductAccess.employeeAccountId, employeeAccounts.id)
+    )
+    .where(eq(employeeAccounts.id, employeeAccountId));
+
+  return groupEmployeeProductAccess(rows)[0] ?? null;
+}
+
 export async function updateEmployeeIdentityForActor(input: {
   actor: EmployeeActor;
   employeeAccountId: string;
@@ -311,6 +329,26 @@ export async function updateEmployeeIdentityForActor(input: {
 
     throw error;
   }
+}
+
+export async function updateOwnEmployeeProfile(input: {
+  employeeAccountId: string;
+  personalEmail: string;
+  phone: string;
+  githubUrl: string;
+}): Promise<EmployeeIdentity | null> {
+  const [employee] = await getDb()
+    .update(employeeAccounts)
+    .set({
+      personalEmail: normalizeEmail(input.personalEmail),
+      phone: input.phone.trim(),
+      githubUrl: input.githubUrl.trim(),
+      updatedAt: new Date(),
+    })
+    .where(eq(employeeAccounts.id, input.employeeAccountId))
+    .returning();
+
+  return employee ? toEmployeeIdentity(employee) : null;
 }
 
 export async function updateEmployeeRoleStatusForActor(input: {

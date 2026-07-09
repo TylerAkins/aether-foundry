@@ -20,6 +20,7 @@ import {
   logoutEmployeeService,
   verifyLoginTotpService,
 } from "@/features/auth/services/login";
+import { updateOwnEmployeeProfileService } from "@/features/auth/services/profile";
 import {
   beginTotpSetupService,
   confirmTotpSetupService,
@@ -132,6 +133,17 @@ export async function regenerateRecoveryCodesAction(
     session.employee.id,
     formDataToRecord(formData),
     await getAuthClientIp()
+  );
+}
+
+export async function updateOwnEmployeeProfileAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const session = await requireEmployeeSession();
+
+  return updateOwnEmployeeProfileService(
+    session.employee.id,
+    formDataToRecord(formData)
   );
 }
 

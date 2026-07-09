@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight, CircleUserRound, ExternalLink } from "lucide-react";
+import { notFound } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
-import { signOutAction } from "@/features/auth/server/actions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getOwnEmployeeProfileService } from "@/features/auth/services/profile";
 import { requireEmployeeSession } from "@/lib/auth/current-session";
+import type { ProductAccess } from "@/features/auth/services/employee-repository";
 
 export const metadata: Metadata = {
   title: "Employee Portal | Aether Foundry",
@@ -12,54 +15,138 @@ export const metadata: Metadata = {
 
 export default async function PortalPage() {
   const session = await requireEmployeeSession();
-  const isAdmin =
-    session.employee.globalRole === "owner" ||
-    session.employee.globalRole === "system_admin";
+  const employee = await getOwnEmployeeProfileService(session.employee.id);
+
+  if (!employee) {
+    notFound();
+  }
+
+  const enabledProductAccess = employee.productAccess.filter(
+    (access) => access.launchAccessEnabled
+  );
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto grid w-full max-w-5xl gap-8">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-sky-700">Employee portal</p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-950">
-              Welcome back.
-            </h1>
-            <p className="mt-2 text-slate-600">
-              {session.employee.companyEmail}
-            </p>
-          </div>
-          <form action={signOutAction}>
-            <Button type="submit" variant="outline">
-              Sign out
-            </Button>
-          </form>
+    <main className="px-4 py-8 sm:px-6 lg:py-10">
+      <div className="mx-auto grid w-full max-w-6xl gap-6">
+        <header className="grid gap-2">
+          <p className="text-sm font-semibold text-sky-700">Dashboard</p>
+          <h1 className="text-3xl font-semibold text-slate-950">
+            Welcome back, {employee.firstName}.
+          </h1>
+          <p className="max-w-2xl text-sm leading-6 text-slate-600">
+            View your Aether Foundry identity and launch the products you are
+            authorized to use.
+          </p>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-950">
-            Product launcher
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Company product access will appear here as product integrations are
-            added.
-          </p>
-          <Link
-            href="/account/security"
-            className="mt-5 inline-flex text-sm font-semibold text-sky-700"
-          >
-            Manage account security
-          </Link>
-          {isAdmin ? (
-            <Link
-              href="/portal/admin/employees"
-              className="ml-5 mt-5 inline-flex text-sm font-semibold text-sky-700"
-            >
-              Manage employees
-            </Link>
-          ) : null}
+        <section className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">
+          <Card className="rounded-lg">
+            <CardHeader>
+              <CardTitle>Signed-in identity</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="flex items-center gap-3">
+                <span className="flex size-11 items-center justify-center rounded-lg bg-sky-50 text-sky-700">
+                  <CircleUserRound aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-slate-950">
+                    {employee.firstName} {employee.lastName}
+                  </p>
+                  <p className="truncate text-sm text-slate-600">
+                    {employee.companyEmail}
+                  </p>
+                </div>
+              </div>
+
+              <dl className="grid gap-3 text-sm">
+                <IdentityField label="Role" value={formatLabel(employee.globalRole)} />
+                <IdentityField label="Status" value={formatLabel(employee.status)} />
+                <IdentityField
+                  label="Personal email"
+                  value={employee.personalEmail}
+                />
+              </dl>
+
+              <Link
+                href="/portal/profile"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700"
+              >
+                View profile
+                <ArrowRight aria-hidden className="size-4" />
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg">
+            <CardHeader>
+              <CardTitle>Product launcher</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {enabledProductAccess.length ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {enabledProductAccess.map((access) => (
+                    <ProductLauncherCard key={access.productKey} access={access} />
+                  ))}
+                </div>
+              ) : (
+                <div
+                  role="status"
+                  className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm leading-6 text-slate-600"
+                >
+                  No product launch access is enabled for your account yet.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </section>
       </div>
     </main>
   );
+}
+
+function IdentityField({
+  label,
+  value,
+}: Readonly<{ label: string; value: string }>) {
+  return (
+    <div className="flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-3">
+      <dt className="font-medium text-slate-600">{label}</dt>
+      <dd className="font-semibold text-slate-950">{value}</dd>
+    </div>
+  );
+}
+
+function ProductLauncherCard({ access }: Readonly<{ access: ProductAccess }>) {
+  return (
+    <article className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <div>
+        <h2 className="text-base font-semibold text-slate-950">
+          {formatProductName(access.productKey)}
+        </h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Product role: {formatLabel(access.productRole)}
+        </p>
+      </div>
+      <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500">
+        Launch integration pending
+        <ExternalLink aria-hidden className="size-4" />
+      </p>
+    </article>
+  );
+}
+
+function formatProductName(productKey: string): string {
+  if (productKey === "kvisa_assistant") {
+    return "K Visa Assistant";
+  }
+
+  return formatLabel(productKey);
+}
+
+function formatLabel(value: string): string {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
