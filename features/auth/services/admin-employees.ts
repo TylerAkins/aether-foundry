@@ -26,7 +26,7 @@ import {
   adminUpdateProductAccessSchema,
 } from "@/features/auth/validation/schemas";
 import { hashPassword } from "@/lib/auth/password";
-import type { ProductRole } from "@/lib/db/schema";
+import type { ProductRole } from "@/lib/products/definitions";
 
 const FORBIDDEN_MESSAGE = "You are not authorized to manage employee accounts.";
 const CONFIRMATION_VALUE = "CONFIRM";

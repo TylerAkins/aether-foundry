@@ -7,6 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOwnEmployeeProfileService } from "@/features/auth/services/profile";
 import { requireEmployeeSession } from "@/lib/auth/current-session";
 import type { ProductAccess } from "@/features/auth/services/employee-repository";
+import {
+  getRegisteredProduct,
+  listEnabledProducts,
+  type RegisteredProduct,
+} from "@/lib/products/registry";
 
 export const metadata: Metadata = {
   title: "Employee Portal | Aether Foundry",
@@ -21,8 +26,12 @@ export default async function PortalPage() {
     notFound();
   }
 
-  const enabledProductAccess = employee.productAccess.filter(
-    (access) => access.launchAccessEnabled
+  const enabledProductKeys = new Set(
+    listEnabledProducts().map((product) => product.key)
+  );
+  const launchableProductAccess = employee.productAccess.filter(
+    (access) =>
+      access.launchAccessEnabled && enabledProductKeys.has(access.productKey)
   );
 
   return (
@@ -83,10 +92,14 @@ export default async function PortalPage() {
               <CardTitle>Product launcher</CardTitle>
             </CardHeader>
             <CardContent>
-              {enabledProductAccess.length ? (
+              {launchableProductAccess.length ? (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {enabledProductAccess.map((access) => (
-                    <ProductLauncherCard key={access.productKey} access={access} />
+                  {launchableProductAccess.map((access) => (
+                    <ProductLauncherCard
+                      key={access.productKey}
+                      access={access}
+                      product={getRegisteredProduct(access.productKey)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -117,31 +130,32 @@ function IdentityField({
   );
 }
 
-function ProductLauncherCard({ access }: Readonly<{ access: ProductAccess }>) {
+function ProductLauncherCard({
+  access,
+  product,
+}: Readonly<{ access: ProductAccess; product: RegisteredProduct }>) {
   return (
     <article className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
       <div>
         <h2 className="text-base font-semibold text-slate-950">
-          {formatProductName(access.productKey)}
+          {product.displayName}
         </h2>
         <p className="mt-1 text-sm text-slate-600">
           Product role: {formatLabel(access.productRole)}
         </p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          {product.description}
+        </p>
       </div>
-      <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500">
-        Launch integration pending
+      <Link
+        href={`/portal/products/${access.productKey}/launch`}
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700"
+      >
+        Launch product
         <ExternalLink aria-hidden className="size-4" />
-      </p>
+      </Link>
     </article>
   );
-}
-
-function formatProductName(productKey: string): string {
-  if (productKey === "kvisa_assistant") {
-    return "K Visa Assistant";
-  }
-
-  return formatLabel(productKey);
 }
 
 function formatLabel(value: string): string {

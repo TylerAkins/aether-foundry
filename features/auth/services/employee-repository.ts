@@ -12,9 +12,8 @@ import {
   recoveryCodes,
   type EmployeeGlobalRole,
   type EmployeeStatus,
-  type ProductKey,
-  type ProductRole,
 } from "@/lib/db/schema";
+import type { ProductKey, ProductRole } from "@/lib/products/definitions";
 
 export type EmployeeAccountCredentials = typeof employeeAccounts.$inferSelect;
 

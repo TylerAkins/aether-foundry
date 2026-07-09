@@ -6,6 +6,7 @@ import { ActionForm } from "@/features/auth/components/action-form";
 import { updateOwnEmployeeProfileAction } from "@/features/auth/server/actions";
 import { getOwnEmployeeProfileService } from "@/features/auth/services/profile";
 import { requireEmployeeSession } from "@/lib/auth/current-session";
+import { getRegisteredProduct } from "@/lib/products/registry";
 
 export const metadata: Metadata = {
   title: "My Profile | Aether Foundry",
@@ -66,7 +67,7 @@ export default async function PortalProfilePage() {
                       className="rounded-lg border border-slate-200 p-3"
                     >
                       <p className="font-semibold text-slate-950">
-                        {formatProductName(access.productKey)}
+                        {getRegisteredProduct(access.productKey).displayName}
                       </p>
                       <p className="mt-1 text-slate-600">
                         {formatLabel(access.productRole)} ·{" "}
@@ -144,14 +145,6 @@ function ProfileField({
       <dd className="font-semibold text-slate-950">{value}</dd>
     </div>
   );
-}
-
-function formatProductName(productKey: string): string {
-  if (productKey === "kvisa_assistant") {
-    return "K Visa Assistant";
-  }
-
-  return formatLabel(productKey);
 }
 
 function formatLabel(value: string): string {

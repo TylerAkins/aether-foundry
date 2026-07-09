@@ -3,10 +3,12 @@ import { z } from "zod";
 import {
   employeeGlobalRoles,
   employeeStatuses,
+} from "@/lib/db/schema";
+import {
   productKeys,
   productRolesByProduct,
   type ProductKey,
-} from "@/lib/db/schema";
+} from "@/lib/products/definitions";
 
 const email = z.string().trim().email("Enter a valid company email.").toLowerCase();
 const requiredText = (fieldName: string) =>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listEmployeesAdminService } from "@/features/auth/services/admin-employees";
 import { requireEmployeeAdminSession } from "@/lib/auth/current-session";
+import { getRegisteredProduct } from "@/lib/products/registry";
 
 export const metadata: Metadata = {
   title: "Employee Administration | Aether Foundry",
@@ -71,8 +72,8 @@ export default async function EmployeeAdminPage() {
                           ? employee.productAccess
                               .map((access) =>
                                 access.launchAccessEnabled
-                                  ? `${formatLabel(access.productKey)}: ${formatLabel(access.productRole)}`
-                                  : `${formatLabel(access.productKey)}: disabled`
+                                  ? `${getRegisteredProduct(access.productKey).displayName}: ${formatLabel(access.productRole)}`
+                                  : `${getRegisteredProduct(access.productKey).displayName}: disabled`
                               )
                               .join(", ")
                           : "None"}

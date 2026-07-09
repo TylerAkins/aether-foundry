@@ -13,9 +13,9 @@ import { getEmployeeAdminService } from "@/features/auth/services/admin-employee
 import {
   employeeGlobalRoles,
   employeeStatuses,
-  productRolesByProduct,
 } from "@/lib/db/schema";
 import { requireEmployeeAdminSession } from "@/lib/auth/current-session";
+import { listRegisteredProducts } from "@/lib/products/registry";
 
 type EmployeeDetailPageProps = {
   params: Promise<{ employeeAccountId: string }>;
@@ -41,9 +41,7 @@ export default async function EmployeeDetailPage({
   }
 
   const canManageAdminRole = session.employee.globalRole === "owner";
-  const productAccess = employee.productAccess.find(
-    (access) => access.productKey === "kvisa_assistant"
-  );
+  const registeredProducts = listRegisteredProducts();
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
@@ -202,57 +200,66 @@ export default async function EmployeeDetailPage({
           <CardHeader>
             <CardTitle>Product access</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ActionForm
-              action={updateEmployeeProductAccessAdminAction}
-              submitLabel="Save product access"
-            >
-              <input
-                type="hidden"
-                name="employeeAccountId"
-                value={employee.id}
-              />
-              <input type="hidden" name="productKey" value="kvisa_assistant" />
-              <label className="grid gap-2 text-sm font-medium text-slate-700">
-                Product
-                <input
-                  value="KVisa Assistant"
-                  readOnly
-                  className="h-10 rounded-lg border border-slate-300 bg-slate-100 px-3 text-slate-950"
-                />
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-slate-700">
-                Product role
-                <select
-                  name="productRole"
-                  defaultValue={productAccess?.productRole ?? "reviewer"}
-                  className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-slate-950"
+          <CardContent className="grid gap-6">
+            {registeredProducts.map((product) => {
+              const productAccess = employee.productAccess.find(
+                (access) => access.productKey === product.key
+              );
+
+              return (
+                <ActionForm
+                  key={product.key}
+                  action={updateEmployeeProductAccessAdminAction}
+                  submitLabel={`Save ${product.displayName} access`}
                 >
-                  {productRolesByProduct.kvisa_assistant.map((role) => (
-                    <option key={role} value={role}>
-                      {formatLabel(role)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
-                <input
-                  name="launchAccessEnabled"
-                  type="checkbox"
-                  defaultChecked={productAccess?.launchAccessEnabled ?? false}
-                  className="size-4 rounded border-slate-300"
-                />
-                Launch access enabled
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-slate-700">
-                Confirmation
-                <input
-                  name="confirmation"
-                  placeholder="CONFIRM"
-                  className="h-10 rounded-lg border border-slate-300 px-3 text-slate-950"
-                />
-              </label>
-            </ActionForm>
+                  <input
+                    type="hidden"
+                    name="employeeAccountId"
+                    value={employee.id}
+                  />
+                  <input type="hidden" name="productKey" value={product.key} />
+                  <label className="grid gap-2 text-sm font-medium text-slate-700">
+                    Product
+                    <input
+                      value={product.displayName}
+                      readOnly
+                      className="h-10 rounded-lg border border-slate-300 bg-slate-100 px-3 text-slate-950"
+                    />
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-slate-700">
+                    Product role
+                    <select
+                      name="productRole"
+                      defaultValue={productAccess?.productRole ?? product.roles[0] ?? ""}
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-slate-950"
+                    >
+                      {product.roles.map((role) => (
+                        <option key={role} value={role}>
+                          {formatLabel(role)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                    <input
+                      name="launchAccessEnabled"
+                      type="checkbox"
+                      defaultChecked={productAccess?.launchAccessEnabled ?? false}
+                      className="size-4 rounded border-slate-300"
+                    />
+                    Launch access enabled
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-slate-700">
+                    Confirmation
+                    <input
+                      name="confirmation"
+                      placeholder="CONFIRM"
+                      className="h-10 rounded-lg border border-slate-300 px-3 text-slate-950"
+                    />
+                  </label>
+                </ActionForm>
+              );
+            })}
           </CardContent>
         </Card>
       </div>
