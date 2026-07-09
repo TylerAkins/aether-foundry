@@ -70,4 +70,14 @@ describe("parseAppEnv", () => {
       })
     );
   });
+
+  it("rejects non-HTTP KVisaAssistant launch URLs", () => {
+    expect(() =>
+      parseAppEnv({
+        ...validEnv,
+        KVISA_ASSISTANT_ENABLED: "true",
+        KVISA_ASSISTANT_LAUNCH_URL: "javascript:alert(1)",
+      })
+    ).toThrow("KVISA_ASSISTANT_LAUNCH_URL must be a valid HTTP(S) URL.");
+  });
 });

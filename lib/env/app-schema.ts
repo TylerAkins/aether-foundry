@@ -45,13 +45,13 @@ const appEnvSchema = z.object({
       }
 
       try {
-        new URL(value);
-        return true;
+        const url = new URL(value);
+        return url.protocol === "http:" || url.protocol === "https:";
       } catch {
         return false;
       }
     },
-    "KVISA_ASSISTANT_LAUNCH_URL must be a valid URL."
+    "KVISA_ASSISTANT_LAUNCH_URL must be a valid HTTP(S) URL."
   ),
 });
 

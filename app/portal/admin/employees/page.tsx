@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listEmployeesAdminService } from "@/features/auth/services/admin-employees";
 import { requireEmployeeAdminSession } from "@/lib/auth/current-session";
-import { getRegisteredProduct } from "@/lib/products/registry";
+import { findRegisteredProduct } from "@/lib/products/registry";
 
 export const metadata: Metadata = {
   title: "Employee Administration | Aether Foundry",
@@ -72,8 +72,8 @@ export default async function EmployeeAdminPage() {
                           ? employee.productAccess
                               .map((access) =>
                                 access.launchAccessEnabled
-                                  ? `${getRegisteredProduct(access.productKey).displayName}: ${formatLabel(access.productRole)}`
-                                  : `${getRegisteredProduct(access.productKey).displayName}: disabled`
+                                  ? `${formatProductName(access.productKey)}: ${formatLabel(access.productRole)}`
+                                  : `${formatProductName(access.productKey)}: disabled`
                               )
                               .join(", ")
                           : "None"}
@@ -103,4 +103,8 @@ function formatLabel(value: string): string {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatProductName(productKey: string): string {
+  return findRegisteredProduct(productKey)?.displayName ?? formatLabel(productKey);
 }

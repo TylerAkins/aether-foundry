@@ -81,6 +81,14 @@ vi.mock("@/lib/products/registry", () => {
   };
 
   return {
+    findRegisteredProduct: vi.fn((productKey: string) =>
+      productKey === product.key
+        ? {
+            ...product,
+            enabled: mocks.productsEnabled,
+          }
+        : null
+    ),
     getRegisteredProduct: vi.fn(() => ({
       ...product,
       enabled: mocks.productsEnabled,

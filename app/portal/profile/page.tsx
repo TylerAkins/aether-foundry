@@ -6,7 +6,7 @@ import { ActionForm } from "@/features/auth/components/action-form";
 import { updateOwnEmployeeProfileAction } from "@/features/auth/server/actions";
 import { getOwnEmployeeProfileService } from "@/features/auth/services/profile";
 import { requireEmployeeSession } from "@/lib/auth/current-session";
-import { getRegisteredProduct } from "@/lib/products/registry";
+import { findRegisteredProduct } from "@/lib/products/registry";
 
 export const metadata: Metadata = {
   title: "My Profile | Aether Foundry",
@@ -67,7 +67,7 @@ export default async function PortalProfilePage() {
                       className="rounded-lg border border-slate-200 p-3"
                     >
                       <p className="font-semibold text-slate-950">
-                        {getRegisteredProduct(access.productKey).displayName}
+                        {formatProductName(access.productKey)}
                       </p>
                       <p className="mt-1 text-slate-600">
                         {formatLabel(access.productRole)} ·{" "}
@@ -152,4 +152,8 @@ function formatLabel(value: string): string {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatProductName(productKey: string): string {
+  return findRegisteredProduct(productKey)?.displayName ?? formatLabel(productKey);
 }

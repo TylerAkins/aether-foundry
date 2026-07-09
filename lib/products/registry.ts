@@ -2,6 +2,7 @@ import "server-only";
 
 import { appEnv, type AppEnv } from "@/lib/env/app";
 import {
+  isProductKey,
   productRolesByProduct,
   type ProductKey,
   type ProductRole,
@@ -38,6 +39,17 @@ export function getRegisteredProduct(
   registry: ProductRegistry = productRegistry
 ): RegisteredProduct {
   return registry[productKey];
+}
+
+export function findRegisteredProduct(
+  productKey: string,
+  registry: ProductRegistry = productRegistry
+): RegisteredProduct | null {
+  if (!isProductKey(productKey)) {
+    return null;
+  }
+
+  return registry[productKey] ?? null;
 }
 
 export function listRegisteredProducts(

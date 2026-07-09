@@ -18,6 +18,7 @@ vi.mock("@/lib/env/app", () => ({
 
 import {
   createProductRegistry,
+  findRegisteredProduct,
   listEnabledProducts,
 } from "@/lib/products/registry";
 
@@ -46,5 +47,14 @@ describe("product registry", () => {
     });
 
     expect(listEnabledProducts(registry)).toEqual([]);
+  });
+
+  it("returns null for unknown product keys", () => {
+    const registry = createProductRegistry({
+      KVISA_ASSISTANT_ENABLED: true,
+      KVISA_ASSISTANT_LAUNCH_URL: "http://localhost:3001",
+    });
+
+    expect(findRegisteredProduct("unknown_product", registry)).toBeNull();
   });
 });
