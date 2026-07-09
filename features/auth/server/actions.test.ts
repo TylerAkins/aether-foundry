@@ -47,6 +47,10 @@ vi.mock("@/features/auth/services/totp", () => ({
 }));
 
 vi.mock("@/lib/security/client-ip", () => ({
+  getAuditRequestContext: vi.fn(async () => ({
+    clientIp: "127.0.0.1",
+    userAgentHash: "user-agent-hash",
+  })),
   getAuthClientIp: vi.fn(async () => "127.0.0.1"),
 }));
 

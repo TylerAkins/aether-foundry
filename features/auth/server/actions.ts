@@ -29,7 +29,7 @@ import {
 } from "@/features/auth/services/totp";
 import type { ActionResult } from "@/features/auth/types";
 import { requireEmployeeSession } from "@/lib/auth/current-session";
-import { getAuthClientIp } from "@/lib/security/client-ip";
+import { getAuditRequestContext, getAuthClientIp } from "@/lib/security/client-ip";
 
 export async function signInAction(formData: FormData): Promise<ActionResult> {
   const result = await loginEmployeeService(
@@ -154,7 +154,8 @@ export async function createEmployeeAdminAction(
 
   return createEmployeeAdminService(
     session.employee,
-    formDataToRecord(formData)
+    formDataToRecord(formData),
+    await getAuditRequestContext()
   );
 }
 
@@ -165,7 +166,8 @@ export async function updateEmployeeIdentityAdminAction(
 
   return updateEmployeeIdentityAdminService(
     session.employee,
-    formDataToRecord(formData)
+    formDataToRecord(formData),
+    await getAuditRequestContext()
   );
 }
 
@@ -176,7 +178,8 @@ export async function updateEmployeeRoleStatusAdminAction(
 
   return updateEmployeeRoleStatusAdminService(
     session.employee,
-    formDataToRecord(formData)
+    formDataToRecord(formData),
+    await getAuditRequestContext()
   );
 }
 
@@ -187,6 +190,7 @@ export async function updateEmployeeProductAccessAdminAction(
 
   return updateEmployeeProductAccessAdminService(
     session.employee,
-    formDataToRecord(formData)
+    formDataToRecord(formData),
+    await getAuditRequestContext()
   );
 }

@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { LayoutDashboard, LogOut, Shield, User, Users } from "lucide-react";
+import {
+  FileClock,
+  LayoutDashboard,
+  LogOut,
+  Shield,
+  User,
+  Users,
+} from "lucide-react";
 import type * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -45,9 +52,17 @@ export default async function PortalLayout({
               Security
             </PortalLink>
             {isAdmin ? (
-              <PortalLink href="/portal/admin/employees" icon={<Users aria-hidden />}>
-                Employees
-              </PortalLink>
+              <>
+                <PortalLink href="/portal/admin/employees" icon={<Users aria-hidden />}>
+                  Employees
+                </PortalLink>
+                <PortalLink
+                  href="/portal/admin/audit-events"
+                  icon={<FileClock aria-hidden />}
+                >
+                  Audit
+                </PortalLink>
+              </>
             ) : null}
           </nav>
 

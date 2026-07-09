@@ -3,6 +3,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -252,5 +253,45 @@ export const recoveryCodes = pgTable(
   },
   (table) => [
     index("recovery_codes_employee_account_id_idx").on(table.employeeAccountId),
+  ]
+);
+
+export const securityAuditEvents = pgTable(
+  "security_audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorEmployeeAccountId: uuid("actor_employee_account_id"),
+    actorGlobalRole: employeeGlobalRoleEnum("actor_global_role"),
+    action: text("action").notNull(),
+    outcome: text("outcome").notNull(),
+    targetEmployeeAccountId: uuid("target_employee_account_id"),
+    requestContext: jsonb("request_context")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    details: jsonb("details").$type<Record<string, unknown>>().notNull(),
+    previousEventHash: text("previous_event_hash"),
+    eventHash: text("event_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("security_audit_events_created_at_idx").on(table.createdAt),
+    index("security_audit_events_actor_employee_account_id_idx").on(
+      table.actorEmployeeAccountId
+    ),
+    index("security_audit_events_target_employee_account_id_idx").on(
+      table.targetEmployeeAccountId
+    ),
+    index("security_audit_events_action_idx").on(table.action),
+    index("security_audit_events_outcome_idx").on(table.outcome),
+    check(
+      "security_audit_events_action_not_blank",
+      sql`length(trim(${table.action})) > 0`
+    ),
+    check(
+      "security_audit_events_outcome_not_blank",
+      sql`length(trim(${table.outcome})) > 0`
+    ),
   ]
 );

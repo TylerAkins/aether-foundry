@@ -148,6 +148,32 @@ vi.mock("@/features/auth/services/admin-employees", () => ({
   ]),
 }));
 
+vi.mock("@/features/auth/services/audit-events", () => ({
+  DEFAULT_AUDIT_PAGE_SIZE: 25,
+  listAuditEventsForActor: vi.fn(async () => ({
+    events: [
+      {
+        id: "audit-1",
+        actorEmployeeAccountId: "owner-1",
+        actorGlobalRole: "owner",
+        action: "employee.create",
+        outcome: "success",
+        targetEmployeeAccountId: "00000000-0000-4000-8000-000000000001",
+        requestContext: { clientIp: "local", userAgentHash: null },
+        details: {
+          before: null,
+          after: { companyEmail: "employee@example.com" },
+        },
+        previousEventHash: null,
+        eventHash: "event-hash",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    ],
+    page: 1,
+    pageSize: 25,
+  })),
+}));
+
 vi.mock("@/lib/auth/current-session", () => ({
   requireEmployeeSession: vi.fn(async () => ({
     employee: {
@@ -172,6 +198,7 @@ vi.mock("@/lib/auth/current-session", () => ({
 }));
 
 import AccountSecurityPage from "@/app/account/security/page";
+import AuditEventsPage from "@/app/portal/admin/audit-events/page";
 import EmployeeDetailPage from "@/app/portal/admin/employees/[employeeAccountId]/page";
 import EmployeeAdminPage from "@/app/portal/admin/employees/page";
 import NewEmployeePage from "@/app/portal/admin/employees/new/page";
@@ -344,6 +371,7 @@ describe("auth pages", () => {
     expect(document.body.textContent).toContain("Dashboard");
     expect(document.body.textContent).toContain("My Profile");
     expect(document.body.textContent).not.toContain("Employees");
+    expect(document.body.textContent).not.toContain("Audit");
 
     vi.mocked(requireEmployeeSession).mockResolvedValueOnce({
       employee: {
@@ -363,6 +391,7 @@ describe("auth pages", () => {
     );
 
     expect(document.body.textContent).toContain("Employees");
+    expect(document.body.textContent).toContain("Audit");
   });
 
   it("renders employee administration pages", async () => {
@@ -384,6 +413,15 @@ describe("auth pages", () => {
     expect(document.body.textContent).toContain("Role and status");
     expect(document.body.textContent).toContain("Product access");
     expect(document.querySelector('input[name="confirmation"]')).not.toBeNull();
+
+    await renderPage(
+      await AuditEventsPage({
+        searchParams: Promise.resolve({}),
+      })
+    );
+    expect(document.body.textContent).toContain("Security audit events");
+    expect(document.body.textContent).toContain("employee.create");
+    expect(document.body.textContent).toContain("owner-1");
   });
 });
 
