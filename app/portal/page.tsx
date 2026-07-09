@@ -22,7 +22,9 @@ export default async function PortalPage() {
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">
               Welcome back.
             </h1>
-            <p className="mt-2 text-slate-600">{session.employee.email}</p>
+            <p className="mt-2 text-slate-600">
+              {session.employee.companyEmail}
+            </p>
           </div>
           <form action={signOutAction}>
             <Button type="submit" variant="outline">

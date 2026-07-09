@@ -1,10 +1,34 @@
 import { z } from "zod";
 
+import {
+  employeeGlobalRoles,
+  employeeStatuses,
+  productKeys,
+  productRolesByProduct,
+  type ProductKey,
+} from "@/lib/db/schema";
+
 const email = z.string().trim().email("Enter a valid company email.").toLowerCase();
+const requiredText = (fieldName: string) =>
+  z.string().trim().min(1, `${fieldName} is required.`);
 const password = z
   .string()
   .min(12, "Password must be at least 12 characters.")
   .max(256, "Password is too long.");
+const githubUrl = z
+  .string()
+  .trim()
+  .url("Enter a valid GitHub URL.")
+  .refine((value) => {
+    try {
+      const url = new URL(value);
+      return (
+        url.hostname === "github.com" || url.hostname.endsWith(".github.com")
+      );
+    } catch {
+      return false;
+    }
+  }, "Enter a valid GitHub URL.");
 
 export const loginSchema = z.object({
   email,
@@ -40,9 +64,38 @@ export const disableTotpSchema = z.object({
 });
 
 export const createEmployeeSchema = z.object({
-  email,
+  companyEmail: email,
+  personalEmail: z.string().trim().email("Enter a valid personal email.").toLowerCase(),
+  firstName: requiredText("First name"),
+  middleName: z.string().trim().optional(),
+  lastName: requiredText("Last name"),
+  phone: requiredText("Phone"),
+  githubUrl,
   password,
-  role: z.enum(["owner", "system_admin", "employee"]).default("employee"),
-  status: z.enum(["active", "disabled"]).default("active"),
+  globalRole: z.enum(employeeGlobalRoles).default("employee"),
+  status: z.enum(employeeStatuses).default("pending"),
   verified: z.boolean().default(false),
 });
+
+export const updateEmployeeStatusSchema = z.object({
+  status: z.enum(employeeStatuses),
+});
+
+export const productAccessSchema = z
+  .object({
+    employeeAccountId: z.string().uuid("Employee account ID is invalid."),
+    productKey: z.enum(productKeys),
+    productRole: z.string().trim().min(1, "Product role is required."),
+    launchAccessEnabled: z.boolean().default(false),
+  })
+  .superRefine((value, context) => {
+    const productRoles = productRolesByProduct[value.productKey as ProductKey];
+
+    if (!(productRoles as readonly string[]).includes(value.productRole)) {
+      context.addIssue({
+        code: "custom",
+        path: ["productRole"],
+        message: "Product role is invalid for this product.",
+      });
+    }
+  });

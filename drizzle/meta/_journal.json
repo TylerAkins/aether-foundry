@@ -8,6 +8,13 @@
       "when": 1783581899544,
       "tag": "0000_fat_obadiah_stane",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783583445388,
+      "tag": "0001_solid_natasha_romanoff",
+      "breakpoints": true
     }
   ]
 }

@@ -1,28 +1,62 @@
 import {
   boolean,
+  check,
   index,
   integer,
+  pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
-export const employeeRoles = ["owner", "system_admin", "employee"] as const;
-export const employeeStatuses = ["active", "disabled"] as const;
+export const employeeGlobalRoles = [
+  "owner",
+  "system_admin",
+  "employee",
+] as const;
+export const employeeStatuses = [
+  "pending",
+  "active",
+  "suspended",
+  "terminated",
+] as const;
+export const productKeys = ["kvisa_assistant"] as const;
+export const productRolesByProduct = {
+  kvisa_assistant: ["owner", "admin", "reviewer", "support"],
+} as const satisfies Record<(typeof productKeys)[number], readonly string[]>;
 
-export type EmployeeRole = (typeof employeeRoles)[number];
+export type EmployeeGlobalRole = (typeof employeeGlobalRoles)[number];
 export type EmployeeStatus = (typeof employeeStatuses)[number];
+export type ProductKey = (typeof productKeys)[number];
+export type ProductRole<TProductKey extends ProductKey = ProductKey> =
+  (typeof productRolesByProduct)[TProductKey][number];
+
+export const employeeGlobalRoleEnum = pgEnum(
+  "employee_global_role",
+  employeeGlobalRoles
+);
+export const employeeStatusEnum = pgEnum("employee_status", employeeStatuses);
 
 export const employeeAccounts = pgTable(
   "employee_accounts",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    email: text("email").notNull(),
+    companyEmail: text("company_email").notNull(),
+    personalEmail: text("personal_email").notNull(),
+    firstName: text("first_name").notNull(),
+    middleName: text("middle_name"),
+    lastName: text("last_name").notNull(),
+    phone: text("phone").notNull(),
+    githubUrl: text("github_url").notNull(),
     passwordHash: text("password_hash").notNull(),
-    role: text("role").notNull().default("employee"),
-    status: text("status").notNull().default("active"),
+    globalRole: employeeGlobalRoleEnum("global_role")
+      .notNull()
+      .default("employee"),
+    status: employeeStatusEnum("status").notNull().default("pending"),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -31,7 +65,73 @@ export const employeeAccounts = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [uniqueIndex("employee_accounts_email_idx").on(table.email)]
+  (table) => [
+    uniqueIndex("employee_accounts_company_email_idx").on(table.companyEmail),
+    index("employee_accounts_status_idx").on(table.status),
+    index("employee_accounts_global_role_idx").on(table.globalRole),
+    check(
+      "employee_accounts_company_email_not_blank",
+      sql`length(trim(${table.companyEmail})) > 0`
+    ),
+    check(
+      "employee_accounts_personal_email_not_blank",
+      sql`length(trim(${table.personalEmail})) > 0`
+    ),
+    check(
+      "employee_accounts_first_name_not_blank",
+      sql`length(trim(${table.firstName})) > 0`
+    ),
+    check(
+      "employee_accounts_last_name_not_blank",
+      sql`length(trim(${table.lastName})) > 0`
+    ),
+    check(
+      "employee_accounts_phone_not_blank",
+      sql`length(trim(${table.phone})) > 0`
+    ),
+    check(
+      "employee_accounts_github_url_not_blank",
+      sql`length(trim(${table.githubUrl})) > 0`
+    ),
+  ]
+);
+
+export const employeeProductAccess = pgTable(
+  "employee_product_access",
+  {
+    employeeAccountId: uuid("employee_account_id")
+      .notNull()
+      .references(() => employeeAccounts.id, { onDelete: "cascade" }),
+    productKey: text("product_key").notNull(),
+    productRole: text("product_role").notNull(),
+    launchAccessEnabled: boolean("launch_access_enabled")
+      .notNull()
+      .default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.employeeAccountId, table.productKey],
+      name: "employee_product_access_pk",
+    }),
+    index("employee_product_access_employee_account_id_idx").on(
+      table.employeeAccountId
+    ),
+    index("employee_product_access_product_key_idx").on(table.productKey),
+    check(
+      "employee_product_access_product_key_not_blank",
+      sql`length(trim(${table.productKey})) > 0`
+    ),
+    check(
+      "employee_product_access_product_role_not_blank",
+      sql`length(trim(${table.productRole})) > 0`
+    ),
+  ]
 );
 
 export const sessions = pgTable(
