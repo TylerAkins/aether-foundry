@@ -57,6 +57,13 @@ export async function beginTotpSetupService(
     .where(eq(totpSettings.employeeAccountId, employeeAccountId))
     .limit(1);
 
+  if (existing?.enabled) {
+    return {
+      success: false,
+      error: "TOTP is already enabled. Remove it before starting setup again.",
+    };
+  }
+
   if (existing) {
     await getDb()
       .update(totpSettings)

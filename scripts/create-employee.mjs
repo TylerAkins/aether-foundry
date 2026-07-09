@@ -98,16 +98,34 @@ try {
       ${args.status},
       ${args.verified ? new Date() : null}
     )
+    on conflict (email) do nothing
     returning id, email, role, status, email_verified_at
   `;
 
-  console.info("Employee account created.", {
-    id: employee.id,
-    email: employee.email,
-    role: employee.role,
-    status: employee.status,
-    verified: Boolean(employee.email_verified_at),
-  });
+  if (employee) {
+    console.info("Employee account created.", {
+      id: employee.id,
+      email: employee.email,
+      role: employee.role,
+      status: employee.status,
+      verified: Boolean(employee.email_verified_at),
+    });
+  } else {
+    const [existing] = await sql`
+      select id, email, role, status, email_verified_at
+      from employee_accounts
+      where email = ${args.email}
+      limit 1
+    `;
+
+    console.info("Employee account already exists.", {
+      id: existing.id,
+      email: existing.email,
+      role: existing.role,
+      status: existing.status,
+      verified: Boolean(existing.email_verified_at),
+    });
+  }
 } finally {
   await sql.end();
 }
