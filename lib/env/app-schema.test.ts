@@ -18,6 +18,7 @@ describe("parseAppEnv", () => {
         APP_URL: "http://localhost:3000",
         TRUST_PROXY_HEADERS: false,
         TRUSTED_PROXY_CIDRS: [],
+        KVISA_ASSISTANT_ENABLED: false,
       })
     );
   });
@@ -42,5 +43,41 @@ describe("parseAppEnv", () => {
         REDIS_URL: "redis://localhost:6379",
       })
     ).toThrow("RESEND_API_KEY is required when APP_ENV=production.");
+  });
+
+  it("requires a KVisaAssistant launch URL only when the product is enabled", () => {
+    expect(
+      parseAppEnv({ ...validEnv, KVISA_ASSISTANT_ENABLED: "false" })
+        .KVISA_ASSISTANT_LAUNCH_URL
+    ).toBeUndefined();
+
+    expect(() =>
+      parseAppEnv({ ...validEnv, KVISA_ASSISTANT_ENABLED: "true" })
+    ).toThrow(
+      "KVISA_ASSISTANT_LAUNCH_URL is required when KVISA_ASSISTANT_ENABLED=true."
+    );
+
+    expect(
+      parseAppEnv({
+        ...validEnv,
+        KVISA_ASSISTANT_ENABLED: "true",
+        KVISA_ASSISTANT_LAUNCH_URL: "http://localhost:3001",
+      })
+    ).toEqual(
+      expect.objectContaining({
+        KVISA_ASSISTANT_ENABLED: true,
+        KVISA_ASSISTANT_LAUNCH_URL: "http://localhost:3001",
+      })
+    );
+  });
+
+  it("rejects non-HTTP KVisaAssistant launch URLs", () => {
+    expect(() =>
+      parseAppEnv({
+        ...validEnv,
+        KVISA_ASSISTANT_ENABLED: "true",
+        KVISA_ASSISTANT_LAUNCH_URL: "javascript:alert(1)",
+      })
+    ).toThrow("KVISA_ASSISTANT_LAUNCH_URL must be a valid HTTP(S) URL.");
   });
 });

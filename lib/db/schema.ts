@@ -12,6 +12,12 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import {
+  productKeys,
+  productRolesByProduct,
+  type ProductKey,
+  type ProductRole,
+} from "@/lib/products/definitions";
 
 export const employeeGlobalRoles = [
   "owner",
@@ -24,16 +30,9 @@ export const employeeStatuses = [
   "suspended",
   "terminated",
 ] as const;
-export const productKeys = ["kvisa_assistant"] as const;
-export const productRolesByProduct = {
-  kvisa_assistant: ["owner", "admin", "reviewer", "support"],
-} as const satisfies Record<(typeof productKeys)[number], readonly string[]>;
-
 export type EmployeeGlobalRole = (typeof employeeGlobalRoles)[number];
 export type EmployeeStatus = (typeof employeeStatuses)[number];
-export type ProductKey = (typeof productKeys)[number];
-export type ProductRole<TProductKey extends ProductKey = ProductKey> =
-  (typeof productRolesByProduct)[TProductKey][number];
+export { productKeys, productRolesByProduct, type ProductKey, type ProductRole };
 
 export const employeeGlobalRoleEnum = pgEnum(
   "employee_global_role",

@@ -5,6 +5,11 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+const mocks = vi.hoisted(() => ({
+  getEmployeeProductLaunch: vi.fn(),
+  productsEnabled: true,
+}));
+
 vi.mock("next/link", () => ({
   default: ({
     href,
@@ -60,6 +65,42 @@ vi.mock("@/features/auth/services/profile", () => ({
     ],
   })),
 }));
+
+vi.mock("@/lib/products/launcher", () => ({
+  getEmployeeProductLaunch: mocks.getEmployeeProductLaunch,
+}));
+
+vi.mock("@/lib/products/registry", () => {
+  const product = {
+    key: "kvisa_assistant",
+    displayName: "K Visa Assistant",
+    description: "Immigration workflow support for K visa matters.",
+    enabled: true,
+    launchUrl: "http://localhost:3001",
+    roles: ["owner", "admin", "reviewer", "support"],
+  };
+
+  return {
+    findRegisteredProduct: vi.fn((productKey: string) =>
+      productKey === product.key
+        ? {
+            ...product,
+            enabled: mocks.productsEnabled,
+          }
+        : null
+    ),
+    getRegisteredProduct: vi.fn(() => ({
+      ...product,
+      enabled: mocks.productsEnabled,
+    })),
+    listEnabledProducts: vi.fn(() =>
+      mocks.productsEnabled ? [{ ...product, enabled: true }] : []
+    ),
+    listRegisteredProducts: vi.fn(() => [
+      { ...product, enabled: mocks.productsEnabled },
+    ]),
+  };
+});
 
 vi.mock("@/features/auth/services/admin-employees", () => ({
   getEmployeeAdminService: vi.fn(async () => ({
@@ -137,6 +178,7 @@ import NewEmployeePage from "@/app/portal/admin/employees/new/page";
 import ForgotPasswordPage from "@/app/forgot-password/page";
 import PortalLayout from "@/app/portal/layout";
 import PortalPage from "@/app/portal/page";
+import ProductLaunchPage from "@/app/portal/products/[productKey]/launch/page";
 import PortalProfilePage from "@/app/portal/profile/page";
 import ResetPasswordPage from "@/app/reset-password/page";
 import SignInPage from "@/app/sign-in/page";
@@ -164,6 +206,9 @@ afterEach(() => {
   container?.remove();
   container = undefined;
   document.body.innerHTML = "";
+  mocks.productsEnabled = true;
+  mocks.getEmployeeProductLaunch.mockReset();
+  vi.mocked(getOwnEmployeeProfileService).mockClear();
 });
 
 describe("auth pages", () => {
@@ -205,6 +250,11 @@ describe("auth pages", () => {
     expect(document.body.textContent).toContain("Dashboard");
     expect(document.body.textContent).toContain("K Visa Assistant");
     expect(document.body.textContent).toContain("Product role: Reviewer");
+    expect(
+      document.querySelector<HTMLAnchorElement>(
+        'a[href="/portal/products/kvisa_assistant/launch"]'
+      )
+    ).not.toBeNull();
 
     await renderPage(await AccountSecurityPage());
     expect(document.body.textContent).toContain("Account security");
@@ -245,6 +295,42 @@ describe("auth pages", () => {
 
     expect(document.body.textContent).toContain(
       "No product launch access is enabled"
+    );
+  });
+
+  it("hides assigned products from the launcher when the product is disabled", async () => {
+    mocks.productsEnabled = false;
+
+    await renderPage(await PortalPage());
+
+    expect(document.body.textContent).not.toContain("K Visa Assistant");
+    expect(document.body.textContent).toContain(
+      "No product launch access is enabled"
+    );
+  });
+
+  it("renders a clear unavailable state for direct disabled product launches", async () => {
+    mocks.getEmployeeProductLaunch.mockResolvedValueOnce({
+      status: "disabled",
+      product: {
+        key: "kvisa_assistant",
+        displayName: "K Visa Assistant",
+        description: "Immigration workflow support for K visa matters.",
+        enabled: false,
+        launchUrl: null,
+        roles: ["owner", "admin", "reviewer", "support"],
+      },
+    });
+
+    await renderPage(
+      await ProductLaunchPage({
+        params: Promise.resolve({ productKey: "kvisa_assistant" }),
+      })
+    );
+
+    expect(document.body.textContent).toContain("K Visa Assistant unavailable");
+    expect(document.body.textContent).toContain(
+      "launching is disabled by Aether Foundry"
     );
   });
 

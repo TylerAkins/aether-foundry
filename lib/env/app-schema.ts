@@ -7,6 +7,10 @@ const optionalTrimmedString = z
   .trim()
   .optional()
   .transform((value) => (value ? value : undefined));
+const envBoolean = z
+  .enum(["true", "false"])
+  .default("false")
+  .transform((value) => value === "true");
 
 const appEnvSchema = z.object({
   APP_ENV: z.enum(appEnvValues).default("local"),
@@ -33,6 +37,22 @@ const appEnvSchema = z.object({
   TRUSTED_PROXY_CIDRS: optionalTrimmedString.transform((value) =>
     value ? value.split(",").map((entry) => entry.trim()).filter(Boolean) : []
   ),
+  KVISA_ASSISTANT_ENABLED: envBoolean,
+  KVISA_ASSISTANT_LAUNCH_URL: optionalTrimmedString.refine(
+    (value) => {
+      if (!value) {
+        return true;
+      }
+
+      try {
+        const url = new URL(value);
+        return url.protocol === "http:" || url.protocol === "https:";
+      } catch {
+        return false;
+      }
+    },
+    "KVISA_ASSISTANT_LAUNCH_URL must be a valid HTTP(S) URL."
+  ),
 });
 
 export type AppEnv = z.infer<typeof appEnvSchema>;
@@ -50,6 +70,15 @@ export function parseAppEnv(env: Record<string, string | undefined>): AppEnv {
 
   if (parsed.data.APP_ENV === "production" && !parsed.data.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY is required when APP_ENV=production.");
+  }
+
+  if (
+    parsed.data.KVISA_ASSISTANT_ENABLED &&
+    !parsed.data.KVISA_ASSISTANT_LAUNCH_URL
+  ) {
+    throw new Error(
+      "KVISA_ASSISTANT_LAUNCH_URL is required when KVISA_ASSISTANT_ENABLED=true."
+    );
   }
 
   return parsed.data;
