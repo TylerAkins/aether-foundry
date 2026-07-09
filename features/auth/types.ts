@@ -3,6 +3,7 @@ export type ActionResult = {
   error?: string;
   message?: string;
   redirectTo?: string;
+  temporaryPassword?: string;
   requiresTotp?: boolean;
   recoveryCodes?: string[];
   qrCodeDataUrl?: string;

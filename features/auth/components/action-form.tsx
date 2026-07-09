@@ -40,10 +40,30 @@ export function ActionForm({
           {state.error}
         </p>
       ) : null}
+      {state.fieldErrors ? (
+        <ul className="grid gap-1 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {Object.entries(state.fieldErrors).map(([field, error]) => (
+            <li key={field}>{error}</li>
+          ))}
+        </ul>
+      ) : null}
       {state.message ? (
         <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-700">
           {state.message}
         </p>
+      ) : null}
+      {state.temporaryPassword ? (
+        <div className="grid gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p className="font-semibold">Temporary password</p>
+          <code className="break-all rounded-md bg-white px-2 py-1 font-mono text-slate-950">
+            {state.temporaryPassword}
+          </code>
+          {state.redirectTo ? (
+            <a href={state.redirectTo} className="font-semibold text-sky-700">
+              Open employee detail
+            </a>
+          ) : null}
+        </div>
       ) : null}
       {state.qrCodeDataUrl ? (
         <Image

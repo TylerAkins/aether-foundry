@@ -38,3 +38,26 @@ export async function requireEmployeeSession(): Promise<SessionResult> {
 
   return session;
 }
+
+export async function requireEmployeeAdminSession(): Promise<SessionResult> {
+  const session = await requireEmployeeSession();
+
+  if (
+    session.employee.globalRole !== "owner" &&
+    session.employee.globalRole !== "system_admin"
+  ) {
+    redirect("/portal");
+  }
+
+  return session;
+}
+
+export async function requireOwnerSession(): Promise<SessionResult> {
+  const session = await requireEmployeeSession();
+
+  if (session.employee.globalRole !== "owner") {
+    redirect("/portal");
+  }
+
+  return session;
+}

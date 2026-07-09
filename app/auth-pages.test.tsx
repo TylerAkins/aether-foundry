@@ -23,9 +23,59 @@ vi.mock("@/features/auth/server/actions", () => ({
   verifyEmailAction: vi.fn(),
   beginTotpSetupFormAction: vi.fn(),
   confirmTotpSetupAction: vi.fn(),
+  createEmployeeAdminAction: vi.fn(),
   disableTotpAction: vi.fn(),
   regenerateRecoveryCodesAction: vi.fn(),
   signOutAction: vi.fn(),
+  updateEmployeeIdentityAdminAction: vi.fn(),
+  updateEmployeeProductAccessAdminAction: vi.fn(),
+  updateEmployeeRoleStatusAdminAction: vi.fn(),
+}));
+
+vi.mock("@/features/auth/services/admin-employees", () => ({
+  getEmployeeAdminService: vi.fn(async () => ({
+    id: "00000000-0000-4000-8000-000000000001",
+    companyEmail: "employee@example.com",
+    personalEmail: "personal@example.com",
+    firstName: "Employee",
+    middleName: null,
+    lastName: "Example",
+    phone: "555-0100",
+    githubUrl: "https://github.com/employee",
+    globalRole: "employee",
+    status: "active",
+    emailVerifiedAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    productAccess: [
+      {
+        employeeAccountId: "00000000-0000-4000-8000-000000000001",
+        productKey: "kvisa_assistant",
+        productRole: "reviewer",
+        launchAccessEnabled: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  })),
+  listEmployeesAdminService: vi.fn(async () => [
+    {
+      id: "00000000-0000-4000-8000-000000000001",
+      companyEmail: "employee@example.com",
+      personalEmail: "personal@example.com",
+      firstName: "Employee",
+      middleName: null,
+      lastName: "Example",
+      phone: "555-0100",
+      githubUrl: "https://github.com/employee",
+      globalRole: "employee",
+      status: "active",
+      emailVerifiedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      productAccess: [],
+    },
+  ]),
 }));
 
 vi.mock("@/lib/auth/current-session", () => ({
@@ -39,9 +89,22 @@ vi.mock("@/lib/auth/current-session", () => ({
     },
     session: { id: "session-1" },
   })),
+  requireEmployeeAdminSession: vi.fn(async () => ({
+    employee: {
+      id: "owner-1",
+      companyEmail: "owner@example.com",
+      globalRole: "owner",
+      status: "active",
+      emailVerifiedAt: new Date(),
+    },
+    session: { id: "session-1" },
+  })),
 }));
 
 import AccountSecurityPage from "@/app/account/security/page";
+import EmployeeDetailPage from "@/app/portal/admin/employees/[employeeAccountId]/page";
+import EmployeeAdminPage from "@/app/portal/admin/employees/page";
+import NewEmployeePage from "@/app/portal/admin/employees/new/page";
 import ForgotPasswordPage from "@/app/forgot-password/page";
 import PortalPage from "@/app/portal/page";
 import ResetPasswordPage from "@/app/reset-password/page";
@@ -110,6 +173,27 @@ describe("auth pages", () => {
 
     await renderPage(await AccountSecurityPage());
     expect(document.body.textContent).toContain("Account security");
+  });
+
+  it("renders employee administration pages", async () => {
+    await renderPage(await EmployeeAdminPage());
+    expect(document.body.textContent).toContain("Employee administration");
+    expect(document.body.textContent).toContain("Create employee");
+
+    await renderPage(await NewEmployeePage());
+    expect(document.body.textContent).toContain("Account details");
+    expect(document.querySelector('select[name="globalRole"]')).not.toBeNull();
+
+    await renderPage(
+      await EmployeeDetailPage({
+        params: Promise.resolve({
+          employeeAccountId: "00000000-0000-4000-8000-000000000001",
+        }),
+      })
+    );
+    expect(document.body.textContent).toContain("Role and status");
+    expect(document.body.textContent).toContain("Product access");
+    expect(document.querySelector('input[name="confirmation"]')).not.toBeNull();
   });
 });
 

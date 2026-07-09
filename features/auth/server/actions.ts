@@ -4,6 +4,12 @@ import { redirect } from "next/navigation";
 
 import { formDataToRecord } from "@/features/auth/server/form-data";
 import {
+  createEmployeeAdminService,
+  updateEmployeeIdentityAdminService,
+  updateEmployeeProductAccessAdminService,
+  updateEmployeeRoleStatusAdminService,
+} from "@/features/auth/services/admin-employees";
+import {
   requestPasswordResetService,
   requestVerificationEmailService,
   resetPasswordService,
@@ -126,5 +132,49 @@ export async function regenerateRecoveryCodesAction(
     session.employee.id,
     formDataToRecord(formData),
     await getAuthClientIp()
+  );
+}
+
+export async function createEmployeeAdminAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const session = await requireEmployeeSession();
+
+  return createEmployeeAdminService(
+    session.employee,
+    formDataToRecord(formData)
+  );
+}
+
+export async function updateEmployeeIdentityAdminAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const session = await requireEmployeeSession();
+
+  return updateEmployeeIdentityAdminService(
+    session.employee,
+    formDataToRecord(formData)
+  );
+}
+
+export async function updateEmployeeRoleStatusAdminAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const session = await requireEmployeeSession();
+
+  return updateEmployeeRoleStatusAdminService(
+    session.employee,
+    formDataToRecord(formData)
+  );
+}
+
+export async function updateEmployeeProductAccessAdminAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const session = await requireEmployeeSession();
+
+  return updateEmployeeProductAccessAdminService(
+    session.employee,
+    formDataToRecord(formData)
   );
 }

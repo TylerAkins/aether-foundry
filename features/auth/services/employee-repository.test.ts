@@ -150,6 +150,24 @@ describe("employee repository", () => {
     ).toBe(false);
   });
 
+  it("requires owner for administrator role changes", () => {
+    expect(
+      repository.canManageAdminRoles({ id: "owner-1", globalRole: "owner" })
+    ).toBe(true);
+    expect(
+      repository.canManageAdminRoles({
+        id: "admin-1",
+        globalRole: "system_admin",
+      })
+    ).toBe(false);
+    expect(
+      repository.canManageAdminRoles({
+        id: "employee-1",
+        globalRole: "employee",
+      })
+    ).toBe(false);
+  });
+
   it("evaluates product launch access independently from global roles", async () => {
     mockLaunchRows([
       {
