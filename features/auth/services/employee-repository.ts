@@ -368,13 +368,18 @@ export async function updateEmployeeStatus(input: {
     return null;
   }
 
-  const [employee] = await getDb()
-    .update(employeeAccounts)
-    .set({ status: input.status, updatedAt: new Date() })
-    .where(eq(employeeAccounts.id, input.employeeAccountId))
-    .returning();
+  const current = await findEmployeeCredentialsById(input.employeeAccountId);
 
-  return employee ? toEmployeeIdentity(employee) : null;
+  if (!current) {
+    return null;
+  }
+
+  return updateEmployeeRoleStatusForActor({
+    actor: input.actor,
+    employeeAccountId: input.employeeAccountId,
+    globalRole: current.globalRole,
+    status: input.status,
+  });
 }
 
 export async function assignEmployeeProductAccess(input: {

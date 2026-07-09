@@ -2,14 +2,14 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 
-import {
-  formatZodErrors,
-} from "@/features/auth/services/action-utils";
+import { formatZodErrors } from "@/features/auth/services/action-utils";
 import {
   DuplicateCompanyEmailError,
   LastActiveOwnerError,
   PrivilegeEscalationError,
   assignEmployeeProductAccess,
+  canManageAdminRoles,
+  canManageEmployees,
   createEmployeeAccountForActor,
   findEmployeeDetailForActor,
   listEmployeesForActor,
@@ -52,6 +52,18 @@ export async function createEmployeeAdminService(
 
   if (!parsed.success) {
     return { success: false, fieldErrors: formatZodErrors(parsed.error) };
+  }
+
+  if (!canManageEmployees(actor)) {
+    return { success: false, error: FORBIDDEN_MESSAGE };
+  }
+
+  if (
+    (parsed.data.globalRole === "owner" ||
+      parsed.data.globalRole === "system_admin") &&
+    !canManageAdminRoles(actor)
+  ) {
+    return adminMutationError(new PrivilegeEscalationError());
   }
 
   const temporaryPassword = generateTemporaryPassword();

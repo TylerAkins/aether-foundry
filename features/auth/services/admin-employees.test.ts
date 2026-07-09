@@ -40,7 +40,6 @@ import {
 } from "@/features/auth/services/admin-employees";
 import {
   LastActiveOwnerError,
-  PrivilegeEscalationError,
 } from "@/features/auth/services/employee-repository";
 
 const actor = { id: "owner-1", globalRole: "owner" as const };
@@ -101,10 +100,6 @@ describe("admin employee services", () => {
   });
 
   it("maps administrator role escalation attempts to an action error", async () => {
-    mocks.createEmployeeAccountForActor.mockRejectedValue(
-      new PrivilegeEscalationError()
-    );
-
     const result = await createEmployeeAdminService(
       { id: "admin-1", globalRole: "system_admin" },
       {
@@ -123,6 +118,31 @@ describe("admin employee services", () => {
       success: false,
       error: "Only Owners can create or change administrator roles.",
     });
+    expect(mocks.hashPassword).not.toHaveBeenCalled();
+    expect(mocks.createEmployeeAccountForActor).not.toHaveBeenCalled();
+  });
+
+  it("does not hash temporary passwords for forbidden employee create attempts", async () => {
+    const result = await createEmployeeAdminService(
+      { id: "employee-1", globalRole: "employee" },
+      {
+        companyEmail: "employee@example.com",
+        personalEmail: "personal@example.com",
+        firstName: "Employee",
+        lastName: "Example",
+        phone: "555-0100",
+        githubUrl: "https://github.com/employee",
+        globalRole: "employee",
+        status: "active",
+      }
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: "You are not authorized to manage employee accounts.",
+    });
+    expect(mocks.hashPassword).not.toHaveBeenCalled();
+    expect(mocks.createEmployeeAccountForActor).not.toHaveBeenCalled();
   });
 
   it("requires confirmation for high-impact role and status changes", async () => {

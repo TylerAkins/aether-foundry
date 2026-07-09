@@ -168,6 +168,64 @@ describe("employee repository", () => {
     ).toBe(false);
   });
 
+  it("protects the last active owner through the legacy status helper", async () => {
+    const firstFindLimit = vi.fn().mockResolvedValue([
+      {
+        ...credentialRow,
+        id: "owner-1",
+        globalRole: "owner",
+        status: "active",
+      },
+    ]);
+    const secondFindLimit = vi.fn().mockResolvedValue([
+      {
+        ...credentialRow,
+        id: "owner-1",
+        globalRole: "owner",
+        status: "active",
+      },
+    ]);
+    const countWhere = vi.fn().mockResolvedValue([{ value: 0 }]);
+    const update = vi.fn();
+
+    mocks.getDb
+      .mockReturnValueOnce({
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: firstFindLimit,
+            }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: secondFindLimit,
+            }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        select: () => ({
+          from: () => ({
+            where: countWhere,
+          }),
+        }),
+      })
+      .mockReturnValue({ update });
+
+    await expect(
+      repository.updateEmployeeStatus({
+        actor: { id: "owner-2", globalRole: "owner" },
+        employeeAccountId: "owner-1",
+        status: "suspended",
+      })
+    ).rejects.toBeInstanceOf(repository.LastActiveOwnerError);
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("evaluates product launch access independently from global roles", async () => {
     mockLaunchRows([
       {
