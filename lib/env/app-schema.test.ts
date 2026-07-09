@@ -1,3 +1,5 @@
+import { generateKeyPairSync } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import { parseAppEnv } from "@/lib/env/app-schema";
@@ -9,6 +11,7 @@ const validEnv = {
   ENCRYPTION_KEY: "b".repeat(32),
   AUTH_EMAIL_FROM: "Aether Foundry <security@example.com>",
 };
+const validLaunchTokenPrivateKey = generatePrivateKeyPem().replaceAll("\n", "\\n");
 
 describe("parseAppEnv", () => {
   it("parses valid local auth environment", () => {
@@ -45,7 +48,7 @@ describe("parseAppEnv", () => {
     ).toThrow("RESEND_API_KEY is required when APP_ENV=production.");
   });
 
-  it("requires a KVisaAssistant launch URL only when the product is enabled", () => {
+  it("requires KVisaAssistant launch configuration only when the product is enabled", () => {
     expect(
       parseAppEnv({ ...validEnv, KVISA_ASSISTANT_ENABLED: "false" })
         .KVISA_ASSISTANT_LAUNCH_URL
@@ -57,16 +60,41 @@ describe("parseAppEnv", () => {
       "KVISA_ASSISTANT_LAUNCH_URL is required when KVISA_ASSISTANT_ENABLED=true."
     );
 
-    expect(
+    expect(() =>
       parseAppEnv({
         ...validEnv,
         KVISA_ASSISTANT_ENABLED: "true",
         KVISA_ASSISTANT_LAUNCH_URL: "http://localhost:3001",
       })
+    ).toThrow(
+      "KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY is required when KVISA_ASSISTANT_ENABLED=true."
+    );
+
+    expect(() =>
+      parseAppEnv({
+        ...validEnv,
+        KVISA_ASSISTANT_ENABLED: "true",
+        KVISA_ASSISTANT_LAUNCH_URL: "http://localhost:3001",
+        KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY: validLaunchTokenPrivateKey,
+      })
+    ).toThrow(
+      "KVISA_ASSISTANT_LAUNCH_TOKEN_KEY_ID is required when KVISA_ASSISTANT_ENABLED=true."
+    );
+
+    expect(
+      parseAppEnv({
+        ...validEnv,
+        KVISA_ASSISTANT_ENABLED: "true",
+        KVISA_ASSISTANT_LAUNCH_URL: "http://localhost:3001",
+        KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY: validLaunchTokenPrivateKey,
+        KVISA_ASSISTANT_LAUNCH_TOKEN_KEY_ID: "kvisa-local-1",
+      })
     ).toEqual(
       expect.objectContaining({
         KVISA_ASSISTANT_ENABLED: true,
         KVISA_ASSISTANT_LAUNCH_URL: "http://localhost:3001",
+        KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY: validLaunchTokenPrivateKey,
+        KVISA_ASSISTANT_LAUNCH_TOKEN_KEY_ID: "kvisa-local-1",
       })
     );
   });
@@ -80,4 +108,40 @@ describe("parseAppEnv", () => {
       })
     ).toThrow("KVISA_ASSISTANT_LAUNCH_URL must be a valid HTTP(S) URL.");
   });
+
+  it("rejects malformed KVisaAssistant launch token key config", () => {
+    expect(() =>
+      parseAppEnv({
+        ...validEnv,
+        KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY: "not a pem key",
+      })
+    ).toThrow(
+      "KVisaAssistant launch token private key must be a PKCS#8 PEM private key."
+    );
+
+    expect(() =>
+      parseAppEnv({
+        ...validEnv,
+        KVISA_ASSISTANT_LAUNCH_TOKEN_PREVIOUS_PUBLIC_JWKS: "not-json",
+      })
+    ).toThrow("KVisaAssistant previous public JWKS must be valid JSON.");
+
+    expect(() =>
+      parseAppEnv({
+        ...validEnv,
+        KVISA_ASSISTANT_LAUNCH_TOKEN_PREVIOUS_PUBLIC_JWKS: JSON.stringify({
+          keys: [{ kid: "private-key", kty: "RSA", p: "private" }],
+        }),
+      })
+    ).toThrow("Previous public JWKS must not include private key material.");
+  });
 });
+
+function generatePrivateKeyPem(): string {
+  const { privateKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    publicExponent: 0x10001,
+  });
+
+  return privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+}
