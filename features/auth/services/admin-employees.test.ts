@@ -6,12 +6,17 @@ const mocks = vi.hoisted(() => ({
   assignEmployeeProductAccess: vi.fn(),
   createEmployeeAccountForActor: vi.fn(),
   findEmployeeDetailForActor: vi.fn(),
+  getDb: vi.fn(),
   hashPassword: vi.fn(),
   listEmployeesForActor: vi.fn(),
   logDeniedPrivilegedAuditAttempt: vi.fn(),
   recordPrivilegedAuditEvent: vi.fn(),
   updateEmployeeIdentityForActor: vi.fn(),
   updateEmployeeRoleStatusForActor: vi.fn(),
+}));
+
+vi.mock("@/lib/db", () => ({
+  getDb: mocks.getDb,
 }));
 
 vi.mock("@/features/auth/services/audit-events", () => ({
@@ -52,6 +57,7 @@ import {
 
 const actor = { id: "owner-1", globalRole: "owner" as const };
 const requestContext = { clientIp: "local", userAgentHash: null };
+const transaction = { transaction: true };
 const employeeId = "00000000-0000-4000-8000-000000000001";
 const employee = {
   id: employeeId,
@@ -73,6 +79,9 @@ const employee = {
 describe("admin employee services", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.getDb.mockReturnValue({
+      transaction: vi.fn(async (callback) => callback(transaction)),
+    });
     mocks.hashPassword.mockResolvedValue("hashed-password");
     mocks.recordPrivilegedAuditEvent.mockResolvedValue({});
   });
@@ -109,7 +118,8 @@ describe("admin employee services", () => {
         middleName: "",
         passwordHash: "hashed-password",
         verified: true,
-      })
+      }),
+      transaction
     );
     expect(mocks.recordPrivilegedAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -118,7 +128,8 @@ describe("admin employee services", () => {
         outcome: "success",
         targetEmployeeAccountId: employee.id,
         requestContext,
-      })
+      }),
+      transaction
     );
     expect(JSON.stringify(mocks.recordPrivilegedAuditEvent.mock.calls)).not.toContain(
       result.temporaryPassword
@@ -267,7 +278,8 @@ describe("admin employee services", () => {
           before: expect.objectContaining({ companyEmail: "employee@example.com" }),
           after: expect.objectContaining({ companyEmail: "updated@example.com" }),
         },
-      })
+      }),
+      transaction
     );
   });
 
@@ -291,6 +303,7 @@ describe("admin employee services", () => {
         requestContext
       )
     ).rejects.toThrow("audit failed");
+    expect(mocks.getDb().transaction).toHaveBeenCalledOnce();
   });
 
   it("requires confirmation before disabling product launch access", async () => {

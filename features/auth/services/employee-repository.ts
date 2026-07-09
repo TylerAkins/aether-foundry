@@ -15,6 +15,9 @@ import {
 } from "@/lib/db/schema";
 import type { ProductKey, ProductRole } from "@/lib/products/definitions";
 
+type Database = ReturnType<typeof getDb>;
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+export type EmployeeRepositoryDb = Database | Transaction;
 export type EmployeeAccountCredentials = typeof employeeAccounts.$inferSelect;
 
 export type EmployeeIdentity = {
@@ -97,9 +100,10 @@ export async function findEmployeeByEmail(
 }
 
 export async function findEmployeeCredentialsById(
-  employeeAccountId: string
+  employeeAccountId: string,
+  database?: EmployeeRepositoryDb
 ): Promise<EmployeeAccountCredentials | null> {
-  const [employee] = await getDb()
+  const [employee] = await (database ?? getDb())
     .select()
     .from(employeeAccounts)
     .where(eq(employeeAccounts.id, employeeAccountId))
@@ -173,9 +177,9 @@ export async function createEmployeeAccount(input: {
   globalRole: EmployeeGlobalRole;
   status: EmployeeStatus;
   verified: boolean;
-}): Promise<EmployeeIdentity> {
+}, database?: EmployeeRepositoryDb): Promise<EmployeeIdentity> {
   try {
-    const [employee] = await getDb()
+    const [employee] = await (database ?? getDb())
       .insert(employeeAccounts)
       .values({
         companyEmail: normalizeEmail(input.companyEmail),
@@ -219,7 +223,7 @@ export async function createEmployeeAccountForActor(input: {
   globalRole: EmployeeGlobalRole;
   status: EmployeeStatus;
   verified: boolean;
-}): Promise<EmployeeIdentity | null> {
+}, database?: EmployeeRepositoryDb): Promise<EmployeeIdentity | null> {
   if (!canManageEmployees(input.actor)) {
     return null;
   }
@@ -228,7 +232,7 @@ export async function createEmployeeAccountForActor(input: {
     throw new PrivilegeEscalationError();
   }
 
-  return createEmployeeAccount(input);
+  return createEmployeeAccount(input, database);
 }
 
 export async function listEmployeesForActor(
@@ -304,13 +308,13 @@ export async function updateEmployeeIdentityForActor(input: {
   lastName: string;
   phone: string;
   githubUrl: string;
-}): Promise<EmployeeIdentity | null> {
+}, database?: EmployeeRepositoryDb): Promise<EmployeeIdentity | null> {
   if (!canManageEmployees(input.actor)) {
     return null;
   }
 
   try {
-    const [employee] = await getDb()
+    const [employee] = await (database ?? getDb())
       .update(employeeAccounts)
       .set({
         companyEmail: normalizeEmail(input.companyEmail),
@@ -360,12 +364,15 @@ export async function updateEmployeeRoleStatusForActor(input: {
   employeeAccountId: string;
   globalRole: EmployeeGlobalRole;
   status: EmployeeStatus;
-}): Promise<EmployeeIdentity | null> {
+}, database?: EmployeeRepositoryDb): Promise<EmployeeIdentity | null> {
   if (!canManageEmployees(input.actor)) {
     return null;
   }
 
-  const current = await findEmployeeCredentialsById(input.employeeAccountId);
+  const current = await findEmployeeCredentialsById(
+    input.employeeAccountId,
+    database
+  );
 
   if (!current) {
     return null;
@@ -383,12 +390,12 @@ export async function updateEmployeeRoleStatusForActor(input: {
     current.globalRole === "owner" &&
     current.status === "active" &&
     (input.globalRole !== "owner" || input.status !== "active") &&
-    (await countOtherActiveOwners(input.employeeAccountId)) === 0
+    (await countOtherActiveOwners(input.employeeAccountId, database)) === 0
   ) {
     throw new LastActiveOwnerError();
   }
 
-  const [employee] = await getDb()
+  const [employee] = await (database ?? getDb())
     .update(employeeAccounts)
     .set({
       globalRole: input.globalRole,
@@ -430,12 +437,12 @@ export async function assignEmployeeProductAccess(input: {
   productKey: ProductKey;
   productRole: ProductRole;
   launchAccessEnabled: boolean;
-}): Promise<ProductAccess | null> {
+}, database?: EmployeeRepositoryDb): Promise<ProductAccess | null> {
   if (!canManageEmployees(input.actor)) {
     return null;
   }
 
-  const [access] = await getDb()
+  const [access] = await (database ?? getDb())
     .insert(employeeProductAccess)
     .values({
       employeeAccountId: input.employeeAccountId,
@@ -684,8 +691,11 @@ function groupEmployeeProductAccess(
   return [...employees.values()];
 }
 
-async function countOtherActiveOwners(employeeAccountId: string): Promise<number> {
-  const [row] = await getDb()
+async function countOtherActiveOwners(
+  employeeAccountId: string,
+  database?: EmployeeRepositoryDb
+): Promise<number> {
+  const [row] = await (database ?? getDb())
     .select({ value: count() })
     .from(employeeAccounts)
     .where(

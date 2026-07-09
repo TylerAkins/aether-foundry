@@ -52,17 +52,14 @@ describe("audit events", () => {
     ]);
     const values = vi.fn(() => ({ returning }));
 
-    mocks.getDb
-      .mockReturnValueOnce({
-        select: () => ({
-          from: () => ({
-            orderBy: () => ({ limit: latestLimit }),
-          }),
+    mocks.getDb.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          orderBy: () => ({ limit: latestLimit }),
         }),
-      })
-      .mockReturnValueOnce({
-        insert: () => ({ values }),
-      });
+      }),
+      insert: () => ({ values }),
+    });
 
     const event = await recordPrivilegedAuditEvent({
       actor: { id: "owner-1", globalRole: "owner" },
@@ -82,6 +79,7 @@ describe("audit events", () => {
         targetEmployeeAccountId: "employee-1",
         previousEventHash: "previous-hash",
         eventHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        createdAt: expect.any(Date),
       })
     );
     expect(event.previousEventHash).toBe("previous-hash");

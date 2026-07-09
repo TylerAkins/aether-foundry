@@ -4,7 +4,11 @@ import { createHash } from "node:crypto";
 
 import { desc } from "drizzle-orm";
 
-import { isEmployeeAdministrator, type EmployeeActor } from "@/features/auth/services/employee-repository";
+import {
+  isEmployeeAdministrator,
+  type EmployeeActor,
+  type EmployeeRepositoryDb,
+} from "@/features/auth/services/employee-repository";
 import { getDb } from "@/lib/db";
 import { securityAuditEvents, type EmployeeGlobalRole } from "@/lib/db/schema";
 
@@ -51,13 +55,14 @@ export async function recordPrivilegedAuditEvent(input: {
   targetEmployeeAccountId?: string | null;
   requestContext: AuditRequestContext;
   details: AuditJson;
-}): Promise<SecurityAuditEvent> {
-  const [previousEvent] = await getDb()
+}, database: EmployeeRepositoryDb = getDb()): Promise<SecurityAuditEvent> {
+  const [previousEvent] = await database
     .select({ eventHash: securityAuditEvents.eventHash })
     .from(securityAuditEvents)
     .orderBy(desc(securityAuditEvents.createdAt))
     .limit(1);
   const previousEventHash = previousEvent?.eventHash ?? null;
+  const createdAt = new Date();
   const eventHash = hashAuditEvent({
     actorEmployeeAccountId: input.actor?.id ?? null,
     actorGlobalRole: input.actor?.globalRole ?? null,
@@ -67,9 +72,10 @@ export async function recordPrivilegedAuditEvent(input: {
     requestContext: input.requestContext,
     details: input.details,
     previousEventHash,
+    createdAt,
   });
 
-  const [event] = await getDb()
+  const [event] = await database
     .insert(securityAuditEvents)
     .values({
       actorEmployeeAccountId: input.actor?.id ?? null,
@@ -81,6 +87,7 @@ export async function recordPrivilegedAuditEvent(input: {
       details: input.details,
       previousEventHash,
       eventHash,
+      createdAt,
     })
     .returning();
 
@@ -142,6 +149,7 @@ function hashAuditEvent(input: {
   requestContext: AuditJson;
   details: AuditJson;
   previousEventHash: string | null;
+  createdAt: Date;
 }): string {
   return createHash("sha256").update(stableStringify(input)).digest("hex");
 }

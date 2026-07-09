@@ -31,6 +31,7 @@ import {
   adminUpdateProductAccessSchema,
 } from "@/features/auth/validation/schemas";
 import { hashPassword } from "@/lib/auth/password";
+import { getDb } from "@/lib/db";
 import type { EmployeeGlobalRole, EmployeeStatus } from "@/lib/db/schema";
 import type { ProductRole } from "@/lib/products/definitions";
 
@@ -87,11 +88,37 @@ export async function createEmployeeAdminService(
   const passwordHash = await hashPassword(temporaryPassword);
 
   try {
-    const employee = await createEmployeeAccountForActor({
-      actor,
-      ...parsed.data,
-      passwordHash,
-      verified: true,
+    const employee = await getDb().transaction(async (tx) => {
+      const createdEmployee = await createEmployeeAccountForActor(
+        {
+          actor,
+          ...parsed.data,
+          passwordHash,
+          verified: true,
+        },
+        tx
+      );
+
+      if (!createdEmployee) {
+        return null;
+      }
+
+      await recordPrivilegedAuditEvent(
+        {
+          actor,
+          action: "employee.create",
+          outcome: "success",
+          targetEmployeeAccountId: createdEmployee.id,
+          requestContext,
+          details: {
+            before: null,
+            after: safeEmployeeDetails(createdEmployee),
+          },
+        },
+        tx
+      );
+
+      return createdEmployee;
     });
 
     if (!employee) {
@@ -102,18 +129,6 @@ export async function createEmployeeAdminService(
       });
       return { success: false, error: FORBIDDEN_MESSAGE };
     }
-
-    await recordPrivilegedAuditEvent({
-      actor,
-      action: "employee.create",
-      outcome: "success",
-      targetEmployeeAccountId: employee.id,
-      requestContext,
-      details: {
-        before: null,
-        after: safeEmployeeDetails(employee),
-      },
-    });
 
     return {
       success: true,
@@ -153,9 +168,35 @@ export async function updateEmployeeIdentityAdminService(
   }
 
   try {
-    const employee = await updateEmployeeIdentityForActor({
-      actor,
-      ...parsed.data,
+    const employee = await getDb().transaction(async (tx) => {
+      const updatedEmployee = await updateEmployeeIdentityForActor(
+        {
+          actor,
+          ...parsed.data,
+        },
+        tx
+      );
+
+      if (!updatedEmployee) {
+        return null;
+      }
+
+      await recordPrivilegedAuditEvent(
+        {
+          actor,
+          action: "employee.identity.update",
+          outcome: "success",
+          targetEmployeeAccountId: updatedEmployee.id,
+          requestContext,
+          details: {
+            before: safeEmployeeIdentityDetails(current),
+            after: safeEmployeeIdentityDetails(updatedEmployee),
+          },
+        },
+        tx
+      );
+
+      return updatedEmployee;
     });
 
     if (!employee) {
@@ -167,18 +208,6 @@ export async function updateEmployeeIdentityAdminService(
       });
       return { success: false, error: FORBIDDEN_MESSAGE };
     }
-
-    await recordPrivilegedAuditEvent({
-      actor,
-      action: "employee.identity.update",
-      outcome: "success",
-      targetEmployeeAccountId: employee.id,
-      requestContext,
-      details: {
-        before: safeEmployeeIdentityDetails(current),
-        after: safeEmployeeIdentityDetails(employee),
-      },
-    });
 
     return { success: true, message: "Employee identity updated." };
   } catch (error) {
@@ -225,11 +254,37 @@ export async function updateEmployeeRoleStatusAdminService(
   }
 
   try {
-    const employee = await updateEmployeeRoleStatusForActor({
-      actor,
-      employeeAccountId: parsed.data.employeeAccountId,
-      globalRole: parsed.data.globalRole,
-      status: parsed.data.status,
+    const employee = await getDb().transaction(async (tx) => {
+      const updatedEmployee = await updateEmployeeRoleStatusForActor(
+        {
+          actor,
+          employeeAccountId: parsed.data.employeeAccountId,
+          globalRole: parsed.data.globalRole,
+          status: parsed.data.status,
+        },
+        tx
+      );
+
+      if (!updatedEmployee) {
+        return null;
+      }
+
+      await recordPrivilegedAuditEvent(
+        {
+          actor,
+          action: "employee.role_status.update",
+          outcome: "success",
+          targetEmployeeAccountId: updatedEmployee.id,
+          requestContext,
+          details: {
+            before: safeRoleStatusDetails(current),
+            after: safeRoleStatusDetails(updatedEmployee),
+          },
+        },
+        tx
+      );
+
+      return updatedEmployee;
     });
 
     if (!employee) {
@@ -242,20 +297,17 @@ export async function updateEmployeeRoleStatusAdminService(
       return { success: false, error: FORBIDDEN_MESSAGE };
     }
 
-    await recordPrivilegedAuditEvent({
-      actor,
-      action: "employee.role_status.update",
-      outcome: "success",
-      targetEmployeeAccountId: employee.id,
-      requestContext,
-      details: {
-        before: safeRoleStatusDetails(current),
-        after: safeRoleStatusDetails(employee),
-      },
-    });
-
     return { success: true, message: "Employee role and status updated." };
   } catch (error) {
+    if (error instanceof PrivilegeEscalationError) {
+      logDeniedPrivilegedAuditAttempt({
+        actor,
+        action: "employee.role_status.update",
+        targetEmployeeAccountId: parsed.data.employeeAccountId,
+        reason: "actor_cannot_manage_admin_roles",
+      });
+    }
+
     return adminMutationError(error);
   }
 }
@@ -303,12 +355,38 @@ export async function updateEmployeeProductAccessAdminService(
     };
   }
 
-  const access = await assignEmployeeProductAccess({
-    actor,
-    employeeAccountId: parsed.data.employeeAccountId,
-    productKey: parsed.data.productKey,
-    productRole: parsed.data.productRole as ProductRole,
-    launchAccessEnabled: parsed.data.launchAccessEnabled,
+  const access = await getDb().transaction(async (tx) => {
+    const updatedAccess = await assignEmployeeProductAccess(
+      {
+        actor,
+        employeeAccountId: parsed.data.employeeAccountId,
+        productKey: parsed.data.productKey,
+        productRole: parsed.data.productRole as ProductRole,
+        launchAccessEnabled: parsed.data.launchAccessEnabled,
+      },
+      tx
+    );
+
+    if (!updatedAccess) {
+      return null;
+    }
+
+    await recordPrivilegedAuditEvent(
+      {
+        actor,
+        action: "employee.product_access.update",
+        outcome: "success",
+        targetEmployeeAccountId: parsed.data.employeeAccountId,
+        requestContext,
+        details: {
+          before: existingAccess ? safeProductAccessDetails(existingAccess) : null,
+          after: safeProductAccessDetails(updatedAccess),
+        },
+      },
+      tx
+    );
+
+    return updatedAccess;
   });
 
   if (!access) {
@@ -320,18 +398,6 @@ export async function updateEmployeeProductAccessAdminService(
     });
     return { success: false, error: FORBIDDEN_MESSAGE };
   }
-
-  await recordPrivilegedAuditEvent({
-    actor,
-    action: "employee.product_access.update",
-    outcome: "success",
-    targetEmployeeAccountId: parsed.data.employeeAccountId,
-    requestContext,
-    details: {
-      before: existingAccess ? safeProductAccessDetails(existingAccess) : null,
-      after: safeProductAccessDetails(access),
-    },
-  });
 
   return { success: true, message: "Product access updated." };
 }
