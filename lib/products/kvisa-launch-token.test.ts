@@ -206,7 +206,7 @@ function generatePrivateKeyPem(): string {
 function tamperTokenSignature(token: string): string {
   const segments = token.split(".");
   const signature = segments[2] ?? "";
-  const replacement = signature.endsWith("a") ? "b" : "a";
+  const replacement = signature.startsWith("A") ? "B" : "A";
 
-  return `${segments[0]}.${segments[1]}.${signature.slice(0, -1)}${replacement}`;
+  return `${segments[0]}.${segments[1]}.${replacement}${signature.slice(1)}`;
 }
