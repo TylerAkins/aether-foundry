@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: Baseline checks
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: local
+      APP_URL: http://localhost:3000
+      DATABASE_URL: postgresql://aether_foundry:change-me@localhost:5432/aether_foundry
+      SESSION_SECRET: ci-session-secret-at-least-32-chars
+      ENCRYPTION_KEY: ci-encryption-key-at-least-32-chars
+      AUTH_EMAIL_FROM: ci@example.com
+      KVISA_ASSISTANT_ENABLED: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
