@@ -57,9 +57,15 @@ import {
 
 const employee = {
   id: "employee-1",
-  email: "employee@example.com",
+  companyEmail: "employee@example.com",
+  personalEmail: "personal@example.com",
+  firstName: "Employee",
+  middleName: null,
+  lastName: "Example",
+  phone: "555-0100",
+  githubUrl: "https://github.com/employee",
   passwordHash: "old-hash",
-  role: "employee",
+  globalRole: "employee",
   status: "active",
   emailVerifiedAt: new Date(),
   createdAt: new Date(),
@@ -156,5 +162,32 @@ describe("email auth flows", () => {
     expect(mocks.createEmailVerificationToken).toHaveBeenCalledWith(
       expect.objectContaining({ employeeAccountId: employee.id })
     );
+  });
+
+  it("does not create reset tokens for suspended or terminated employees", async () => {
+    mocks.findEmployeeByEmail.mockResolvedValue({
+      ...employee,
+      status: "suspended",
+    });
+    mocks.canEmployeeSignIn.mockReturnValue(false);
+
+    const suspendedResult = await requestPasswordResetService(
+      { email: "employee@example.com" },
+      "127.0.0.1"
+    );
+
+    mocks.findEmployeeByEmail.mockResolvedValue({
+      ...employee,
+      status: "terminated",
+    });
+
+    const terminatedResult = await requestPasswordResetService(
+      { email: "employee@example.com" },
+      "127.0.0.1"
+    );
+
+    expect(suspendedResult.success).toBe(true);
+    expect(terminatedResult.success).toBe(true);
+    expect(mocks.createPasswordResetToken).not.toHaveBeenCalled();
   });
 });

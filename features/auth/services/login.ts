@@ -10,6 +10,7 @@ import {
 import {
   canEmployeeSignIn,
   findEmployeeByEmail,
+  findEmployeeCredentialsById,
   markRecoveryCodeUsed,
 } from "@/features/auth/services/employee-repository";
 import type { ActionResult } from "@/features/auth/types";
@@ -191,6 +192,16 @@ export async function verifyLoginTotpService(
   if (!codeValid) {
     await incrementOrClearPendingLogin(pendingLoginId);
     return { success: false, error: TOTP_INVALID_MESSAGE };
+  }
+
+  const employee = await findEmployeeCredentialsById(
+    pendingLogin.employeeAccountId
+  );
+
+  if (!employee || !canEmployeeSignIn(employee)) {
+    await deletePendingLogin(pendingLoginId);
+    await clearPendingLoginCookie();
+    return { success: false, error: LOGIN_INVALID_MESSAGE };
   }
 
   await deletePendingLogin(pendingLoginId);

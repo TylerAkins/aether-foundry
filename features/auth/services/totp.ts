@@ -7,7 +7,10 @@ import {
   formatZodErrors,
   rateLimitError,
 } from "@/features/auth/services/action-utils";
-import { findEmployeeById } from "@/features/auth/services/employee-repository";
+import {
+  findEmployeeCredentialsById,
+  findOwnEmployeeById,
+} from "@/features/auth/services/employee-repository";
 import type { ActionResult } from "@/features/auth/types";
 import {
   disableTotpSchema,
@@ -43,7 +46,7 @@ export async function beginTotpSetupService(
     return rateLimitError(rateLimit.retryAfterSeconds);
   }
 
-  const employee = await findEmployeeById(employeeAccountId);
+  const employee = await findOwnEmployeeById(employeeAccountId);
 
   if (!employee) {
     return { success: false, error: "Employee account was not found." };
@@ -81,7 +84,7 @@ export async function beginTotpSetupService(
     });
   }
 
-  const uri = generateTotpUri(employee.email, secret);
+  const uri = generateTotpUri(employee.companyEmail, secret);
   const qrCodeDataUrl = await QRCode.toDataURL(uri);
 
   return { success: true, qrCodeDataUrl };
@@ -167,7 +170,7 @@ export async function disableTotpService(
     return rateLimitError(rateLimit.retryAfterSeconds);
   }
 
-  const employee = await findEmployeeById(employeeAccountId);
+  const employee = await findEmployeeCredentialsById(employeeAccountId);
 
   if (!employee) {
     return { success: false, error: "Employee account was not found." };

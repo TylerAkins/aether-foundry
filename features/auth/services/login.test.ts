@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({
   findEmployeeByEmail: vi.fn(),
   canEmployeeSignIn: vi.fn(),
+  findEmployeeCredentialsById: vi.fn(),
   markRecoveryCodeUsed: vi.fn(),
   verifyLoginPassword: vi.fn(),
   getDb: vi.fn(),
@@ -29,6 +30,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/features/auth/services/employee-repository", () => ({
   findEmployeeByEmail: mocks.findEmployeeByEmail,
   canEmployeeSignIn: mocks.canEmployeeSignIn,
+  findEmployeeCredentialsById: mocks.findEmployeeCredentialsById,
   markRecoveryCodeUsed: mocks.markRecoveryCodeUsed,
 }));
 
@@ -78,9 +80,15 @@ import {
 
 const employee = {
   id: "employee-1",
-  email: "employee@example.com",
+  companyEmail: "employee@example.com",
+  personalEmail: "personal@example.com",
+  firstName: "Employee",
+  middleName: null,
+  lastName: "Example",
+  phone: "555-0100",
+  githubUrl: "https://github.com/employee",
   passwordHash: "hash",
-  role: "employee",
+  globalRole: "employee",
   status: "active",
   emailVerifiedAt: new Date(),
   createdAt: new Date(),
@@ -92,6 +100,7 @@ describe("loginEmployeeService", () => {
     vi.resetAllMocks();
     mocks.checkAuthRateLimits.mockResolvedValue({ allowed: true });
     mocks.canEmployeeSignIn.mockReturnValue(true);
+    mocks.findEmployeeCredentialsById.mockResolvedValue(employee);
     mocks.getSessionIdFromCookies.mockResolvedValue(null);
     mocks.rotateSession.mockResolvedValue({ id: "session-1" });
     mockTotpRows([]);
@@ -165,6 +174,26 @@ describe("loginEmployeeService", () => {
     });
     expect(mocks.verifyLoginPassword).not.toHaveBeenCalled();
   });
+
+  it.each(["pending", "suspended", "terminated"])(
+    "rejects %s employees",
+    async (status) => {
+      mocks.findEmployeeByEmail.mockResolvedValue({ ...employee, status });
+      mocks.verifyLoginPassword.mockResolvedValue(true);
+      mocks.canEmployeeSignIn.mockReturnValue(false);
+
+      const result = await loginEmployeeService(
+        { email: "employee@example.com", password: "password" },
+        "127.0.0.1"
+      );
+
+      expect(result).toEqual({
+        success: false,
+        error: "The email or password you entered is incorrect.",
+      });
+      expect(mocks.rotateSession).not.toHaveBeenCalled();
+    }
+  );
 });
 
 describe("verifyLoginTotpService", () => {
@@ -179,6 +208,8 @@ describe("verifyLoginTotpService", () => {
       expiresAt: new Date(Date.now() + 1000),
       createdAt: new Date(),
     });
+    mocks.canEmployeeSignIn.mockReturnValue(true);
+    mocks.findEmployeeCredentialsById.mockResolvedValue(employee);
     mocks.getSessionIdFromCookies.mockResolvedValue(null);
     mocks.rotateSession.mockResolvedValue({ id: "session-1" });
   });
@@ -210,6 +241,29 @@ describe("verifyLoginTotpService", () => {
 
     expect(result.success).toBe(false);
     expect(mocks.rotateSession).not.toHaveBeenCalled();
+  });
+
+  it("does not rotate a session when the employee is no longer active", async () => {
+    mocks.decryptTotpSecret.mockReturnValue("secret");
+    mocks.verifyTotpCode.mockResolvedValue(true);
+    mocks.findEmployeeCredentialsById.mockResolvedValue({
+      ...employee,
+      status: "suspended",
+    });
+    mocks.canEmployeeSignIn.mockReturnValue(false);
+    mockTotpRows([{ enabled: true, secretEncrypted: "encrypted" }]);
+
+    const result = await verifyLoginTotpService(
+      { code: "123456" },
+      "127.0.0.1"
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: "The email or password you entered is incorrect.",
+    });
+    expect(mocks.rotateSession).not.toHaveBeenCalled();
+    expect(mocks.deletePendingLogin).toHaveBeenCalledWith("pending-1");
   });
 });
 

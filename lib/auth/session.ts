@@ -4,13 +4,18 @@ import { eq, lt } from "drizzle-orm";
 
 import { SESSION_TTL_MS } from "@/lib/auth/constants";
 import { getDb } from "@/lib/db";
-import { employeeAccounts, sessions } from "@/lib/db/schema";
+import {
+  employeeAccounts,
+  sessions,
+  type EmployeeGlobalRole,
+  type EmployeeStatus,
+} from "@/lib/db/schema";
 
 export type SessionEmployee = {
   id: string;
-  email: string;
-  role: string;
-  status: string;
+  companyEmail: string;
+  globalRole: EmployeeGlobalRole;
+  status: EmployeeStatus;
   emailVerifiedAt: Date | null;
 };
 
@@ -51,8 +56,8 @@ export async function getSession(sessionId: string): Promise<SessionResult | nul
       sessionId: sessions.id,
       employeeAccountId: sessions.employeeAccountId,
       expiresAt: sessions.expiresAt,
-      email: employeeAccounts.email,
-      role: employeeAccounts.role,
+      companyEmail: employeeAccounts.companyEmail,
+      globalRole: employeeAccounts.globalRole,
       status: employeeAccounts.status,
       emailVerifiedAt: employeeAccounts.emailVerifiedAt,
     })
@@ -75,8 +80,8 @@ export async function getSession(sessionId: string): Promise<SessionResult | nul
   return {
     employee: {
       id: row.employeeAccountId,
-      email: row.email,
-      role: row.role,
+      companyEmail: row.companyEmail,
+      globalRole: row.globalRole,
       status: row.status,
       emailVerifiedAt: row.emailVerifiedAt,
     },

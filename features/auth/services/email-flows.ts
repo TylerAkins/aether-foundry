@@ -67,7 +67,7 @@ export async function requestVerificationEmailService(
       expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS),
     });
     await getEmailProvider().send({
-      to: employee.email,
+      to: employee.companyEmail,
       subject: "Verify your Aether Foundry employee account",
       text: `Verify your account: ${appEnv.APP_URL}/verify-email?token=${token}`,
     });
@@ -135,7 +135,7 @@ export async function requestPasswordResetService(
       expiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS),
     });
     await getEmailProvider().send({
-      to: employee.email,
+      to: employee.companyEmail,
       subject: "Reset your Aether Foundry password",
       text: `Reset your password: ${appEnv.APP_URL}/reset-password?token=${token}`,
     });

@@ -32,8 +32,8 @@ vi.mock("@/lib/auth/current-session", () => ({
   requireEmployeeSession: vi.fn(async () => ({
     employee: {
       id: "employee-1",
-      email: "employee@example.com",
-      role: "employee",
+      companyEmail: "employee@example.com",
+      globalRole: "employee",
       status: "active",
       emailVerifiedAt: new Date(),
     },

@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => ({
   checkAuthRateLimits: vi.fn(),
-  findEmployeeById: vi.fn(),
+  findOwnEmployeeById: vi.fn(),
   getDb: vi.fn(),
   toDataURL: vi.fn(),
   generateTotpSecret: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock("@/lib/security/auth-rate-limit", () => ({
 }));
 
 vi.mock("@/features/auth/services/employee-repository", () => ({
-  findEmployeeById: mocks.findEmployeeById,
+  findOwnEmployeeById: mocks.findOwnEmployeeById,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -57,9 +57,15 @@ import { beginTotpSetupService } from "@/features/auth/services/totp";
 
 const employee = {
   id: "employee-1",
-  email: "employee@example.com",
+  companyEmail: "employee@example.com",
+  personalEmail: "personal@example.com",
+  firstName: "Employee",
+  middleName: null,
+  lastName: "Example",
+  phone: "555-0100",
+  githubUrl: "https://github.com/employee",
   passwordHash: "hash",
-  role: "employee",
+  globalRole: "employee",
   status: "active",
   emailVerifiedAt: new Date(),
   createdAt: new Date(),
@@ -70,7 +76,7 @@ describe("beginTotpSetupService", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.checkAuthRateLimits.mockResolvedValue({ allowed: true });
-    mocks.findEmployeeById.mockResolvedValue(employee);
+    mocks.findOwnEmployeeById.mockResolvedValue(employee);
     mocks.generateTotpSecret.mockReturnValue("secret");
     mocks.encryptTotpSecret.mockReturnValue("encrypted-secret");
     mocks.generateTotpUri.mockReturnValue("otpauth://totp/Aether");
