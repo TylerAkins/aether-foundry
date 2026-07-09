@@ -28,8 +28,37 @@ vi.mock("@/features/auth/server/actions", () => ({
   regenerateRecoveryCodesAction: vi.fn(),
   signOutAction: vi.fn(),
   updateEmployeeIdentityAdminAction: vi.fn(),
+  updateOwnEmployeeProfileAction: vi.fn(),
   updateEmployeeProductAccessAdminAction: vi.fn(),
   updateEmployeeRoleStatusAdminAction: vi.fn(),
+}));
+
+vi.mock("@/features/auth/services/profile", () => ({
+  getOwnEmployeeProfileService: vi.fn(async () => ({
+    id: "employee-1",
+    companyEmail: "employee@example.com",
+    personalEmail: "personal@example.com",
+    firstName: "Employee",
+    middleName: null,
+    lastName: "Example",
+    phone: "555-0100",
+    githubUrl: "https://github.com/employee",
+    globalRole: "employee",
+    status: "active",
+    emailVerifiedAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    productAccess: [
+      {
+        employeeAccountId: "employee-1",
+        productKey: "kvisa_assistant",
+        productRole: "reviewer",
+        launchAccessEnabled: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  })),
 }));
 
 vi.mock("@/features/auth/services/admin-employees", () => ({
@@ -106,10 +135,14 @@ import EmployeeDetailPage from "@/app/portal/admin/employees/[employeeAccountId]
 import EmployeeAdminPage from "@/app/portal/admin/employees/page";
 import NewEmployeePage from "@/app/portal/admin/employees/new/page";
 import ForgotPasswordPage from "@/app/forgot-password/page";
+import PortalLayout from "@/app/portal/layout";
 import PortalPage from "@/app/portal/page";
+import PortalProfilePage from "@/app/portal/profile/page";
 import ResetPasswordPage from "@/app/reset-password/page";
 import SignInPage from "@/app/sign-in/page";
 import VerifyEmailPage from "@/app/verify-email/page";
+import { getOwnEmployeeProfileService } from "@/features/auth/services/profile";
+import { requireEmployeeSession } from "@/lib/auth/current-session";
 
 let root: Root | undefined;
 let container: HTMLDivElement | undefined;
@@ -169,10 +202,81 @@ describe("auth pages", () => {
     expect(document.body.textContent).toContain("Reset password");
 
     await renderPage(await PortalPage());
-    expect(document.body.textContent).toContain("Employee portal");
+    expect(document.body.textContent).toContain("Dashboard");
+    expect(document.body.textContent).toContain("K Visa Assistant");
+    expect(document.body.textContent).toContain("Product role: Reviewer");
 
     await renderPage(await AccountSecurityPage());
     expect(document.body.textContent).toContain("Account security");
+  });
+
+  it("renders the portal profile with protected and editable fields", async () => {
+    await renderPage(await PortalProfilePage());
+
+    expect(document.body.textContent).toContain("Protected identity");
+    expect(document.body.textContent).toContain("Product access");
+    expect(document.querySelector('input[name="personalEmail"]')).not.toBeNull();
+    expect(document.querySelector('input[name="phone"]')).not.toBeNull();
+    expect(document.querySelector('input[name="githubUrl"]')).not.toBeNull();
+    expect(document.querySelector('input[name="globalRole"]')).toBeNull();
+    expect(document.querySelector('input[name="status"]')).toBeNull();
+    expect(document.querySelector('input[name="companyEmail"]')).toBeNull();
+  });
+
+  it("renders an empty product launcher state when no products are enabled", async () => {
+    vi.mocked(getOwnEmployeeProfileService).mockResolvedValueOnce({
+      id: "employee-1",
+      companyEmail: "employee@example.com",
+      personalEmail: "personal@example.com",
+      firstName: "Employee",
+      middleName: null,
+      lastName: "Example",
+      phone: "555-0100",
+      githubUrl: "https://github.com/employee",
+      globalRole: "employee",
+      status: "active",
+      emailVerifiedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      productAccess: [],
+    });
+
+    await renderPage(await PortalPage());
+
+    expect(document.body.textContent).toContain(
+      "No product launch access is enabled"
+    );
+  });
+
+  it("renders admin navigation only for portal administrators", async () => {
+    await renderPage(
+      await PortalLayout({
+        children: React.createElement("main", null, "Portal child"),
+      })
+    );
+
+    expect(document.body.textContent).toContain("Dashboard");
+    expect(document.body.textContent).toContain("My Profile");
+    expect(document.body.textContent).not.toContain("Employees");
+
+    vi.mocked(requireEmployeeSession).mockResolvedValueOnce({
+      employee: {
+        id: "owner-1",
+        companyEmail: "owner@example.com",
+        globalRole: "owner",
+        status: "active",
+        emailVerifiedAt: new Date(),
+      },
+      session: { id: "session-1", employeeAccountId: "owner-1", expiresAt: new Date() },
+    });
+
+    await renderPage(
+      await PortalLayout({
+        children: React.createElement("main", null, "Portal child"),
+      })
+    );
+
+    expect(document.body.textContent).toContain("Employees");
   });
 
   it("renders employee administration pages", async () => {

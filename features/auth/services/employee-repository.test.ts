@@ -226,6 +226,101 @@ describe("employee repository", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("fetches the signed-in employee profile with product access", async () => {
+    const rows = [
+      {
+        employee: credentialRow,
+        access: {
+          employeeAccountId: "employee-1",
+          productKey: "kvisa_assistant",
+          productRole: "reviewer",
+          launchAccessEnabled: true,
+          createdAt,
+          updatedAt,
+        },
+      },
+    ];
+    const where = vi.fn().mockResolvedValue(rows);
+
+    mocks.getDb.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          leftJoin: () => ({
+            where,
+          }),
+        }),
+      }),
+    });
+
+    const employee =
+      await repository.findOwnEmployeeWithProductAccess("employee-1");
+
+    expect(where).toHaveBeenCalledOnce();
+    expect(employee).toEqual({
+      id: "employee-1",
+      companyEmail: "employee@example.com",
+      personalEmail: "personal@example.com",
+      firstName: "Employee",
+      middleName: null,
+      lastName: "Example",
+      phone: "555-0100",
+      githubUrl: "https://github.com/employee",
+      globalRole: "employee",
+      status: "active",
+      emailVerifiedAt: credentialRow.emailVerifiedAt,
+      createdAt,
+      updatedAt,
+      productAccess: [
+        {
+          employeeAccountId: "employee-1",
+          productKey: "kvisa_assistant",
+          productRole: "reviewer",
+          launchAccessEnabled: true,
+          createdAt,
+          updatedAt,
+        },
+      ],
+    });
+  });
+
+  it("updates only permitted self-service profile fields", async () => {
+    const returning = vi.fn().mockResolvedValue([
+      {
+        ...credentialRow,
+        personalEmail: "personal@example.com",
+        phone: "555-0100",
+        githubUrl: "https://github.com/employee",
+      },
+    ]);
+    const where = vi.fn(() => ({ returning }));
+    const set = vi.fn((payload: Record<string, unknown>) => {
+      void payload;
+      return { where };
+    });
+    const update = vi.fn(() => ({ set }));
+    mocks.getDb.mockReturnValue({ update });
+
+    await repository.updateOwnEmployeeProfile({
+      employeeAccountId: "employee-1",
+      personalEmail: " Personal@Example.com ",
+      phone: " 555-0100 ",
+      githubUrl: " https://github.com/employee ",
+    });
+
+    expect(set).toHaveBeenCalledWith({
+      personalEmail: "personal@example.com",
+      phone: "555-0100",
+      githubUrl: "https://github.com/employee",
+      updatedAt: expect.any(Date),
+    });
+    const updatePayload = set.mock.calls[0]?.[0];
+    expect(updatePayload).not.toHaveProperty("companyEmail");
+    expect(updatePayload).not.toHaveProperty("globalRole");
+    expect(updatePayload).not.toHaveProperty("status");
+    expect(updatePayload).not.toHaveProperty("productAccess");
+    expect(where).toHaveBeenCalledOnce();
+  });
+
   it("evaluates product launch access independently from global roles", async () => {
     mockLaunchRows([
       {

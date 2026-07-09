@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createEmployeeSchema,
   productAccessSchema,
+  selfUpdateEmployeeProfileSchema,
 } from "@/features/auth/validation/schemas";
 
 const validEmployeeInput = {
@@ -67,6 +68,39 @@ describe("employee validation schemas", () => {
     expect(result.success).toBe(false);
     expect(result.error?.flatten().fieldErrors.productRole).toContain(
       "Product role is invalid for this product."
+    );
+  });
+
+  it("normalizes self-service profile fields", () => {
+    const result = selfUpdateEmployeeProfileSchema.parse({
+      personalEmail: " Personal@Example.com ",
+      phone: " 555-0100 ",
+      githubUrl: " https://github.com/employee ",
+    });
+
+    expect(result).toEqual({
+      personalEmail: "personal@example.com",
+      phone: "555-0100",
+      githubUrl: "https://github.com/employee",
+    });
+  });
+
+  it("rejects invalid self-service profile fields", () => {
+    const result = selfUpdateEmployeeProfileSchema.safeParse({
+      personalEmail: "not-an-email",
+      phone: "",
+      githubUrl: "https://example.com/employee",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.personalEmail).toContain(
+      "Enter a valid personal email."
+    );
+    expect(result.error?.flatten().fieldErrors.phone).toContain(
+      "Phone is required."
+    );
+    expect(result.error?.flatten().fieldErrors.githubUrl).toContain(
+      "Enter a valid GitHub URL."
     );
   });
 });
