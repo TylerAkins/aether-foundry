@@ -1,3 +1,5 @@
+import { generateKeyPairSync } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import { parseAppEnv } from "@/lib/env/app-schema";
@@ -9,8 +11,7 @@ const validEnv = {
   ENCRYPTION_KEY: "b".repeat(32),
   AUTH_EMAIL_FROM: "Aether Foundry <security@example.com>",
 };
-const validLaunchTokenPrivateKey =
-  "-----BEGIN PRIVATE KEY-----\\nkey-body\\n-----END PRIVATE KEY-----";
+const validLaunchTokenPrivateKey = generatePrivateKeyPem().replaceAll("\n", "\\n");
 
 describe("parseAppEnv", () => {
   it("parses valid local auth environment", () => {
@@ -129,9 +130,18 @@ describe("parseAppEnv", () => {
       parseAppEnv({
         ...validEnv,
         KVISA_ASSISTANT_LAUNCH_TOKEN_PREVIOUS_PUBLIC_JWKS: JSON.stringify({
-          keys: [{ kid: "private-key", kty: "RSA", d: "private" }],
+          keys: [{ kid: "private-key", kty: "RSA", p: "private" }],
         }),
       })
     ).toThrow("Previous public JWKS must not include private key material.");
   });
 });
+
+function generatePrivateKeyPem(): string {
+  const { privateKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    publicExponent: 0x10001,
+  });
+
+  return privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+}

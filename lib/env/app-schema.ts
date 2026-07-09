@@ -1,8 +1,9 @@
+import { createPrivateKey } from "node:crypto";
+
 import { z } from "zod";
 
 const appEnvValues = ["local", "production", "test"] as const;
-const pkcs8PrivateKeyHeader = "-----BEGIN PRIVATE KEY-----";
-const privateKeyFooter = "-----END PRIVATE KEY-----";
+const privateJwkParameters = ["d", "p", "q", "dp", "dq", "qi"] as const;
 
 const optionalTrimmedString = z
   .string()
@@ -21,7 +22,10 @@ const publicJwksSchema = z.object({
         kty: z.string().trim().min(1),
       })
       .passthrough()
-      .refine((key) => !("d" in key), "Previous public JWKS must not include private key material.")
+      .refine(
+        (key) => privateJwkParameters.every((parameter) => !(parameter in key)),
+        "Previous public JWKS must not include private key material."
+      )
   ),
 });
 const optionalPublicJwks = optionalTrimmedString.transform((value) => {
@@ -88,10 +92,12 @@ const appEnvSchema = z.object({
       }
 
       const privateKey = normalizePem(value);
-      return (
-        privateKey.startsWith(pkcs8PrivateKeyHeader) &&
-        privateKey.includes(privateKeyFooter)
-      );
+      try {
+        createPrivateKey({ key: privateKey, format: "pem", type: "pkcs8" });
+        return true;
+      } catch {
+        return false;
+      }
     },
     "KVisaAssistant launch token private key must be a PKCS#8 PEM private key."
   ),
