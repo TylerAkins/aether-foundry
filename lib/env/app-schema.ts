@@ -85,22 +85,7 @@ const appEnvSchema = z.object({
     },
     "KVISA_ASSISTANT_LAUNCH_URL must be a valid HTTP(S) URL."
   ),
-  KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY: optionalTrimmedString.refine(
-    (value) => {
-      if (!value) {
-        return true;
-      }
-
-      const privateKey = normalizePem(value);
-      try {
-        createPrivateKey({ key: privateKey, format: "pem", type: "pkcs8" });
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    "KVisaAssistant launch token private key must be a PKCS#8 PEM private key."
-  ),
+  KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY: optionalTrimmedString,
   KVISA_ASSISTANT_LAUNCH_TOKEN_KEY_ID: optionalTrimmedString,
   KVISA_ASSISTANT_LAUNCH_TOKEN_PREVIOUS_PUBLIC_JWKS: optionalPublicJwks,
 });
@@ -142,6 +127,16 @@ export function parseAppEnv(env: Record<string, string | undefined>): AppEnv {
 
   if (
     parsed.data.KVISA_ASSISTANT_ENABLED &&
+    parsed.data.KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY &&
+    !isPkcs8PrivateKey(parsed.data.KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY)
+  ) {
+    throw new Error(
+      "KVisaAssistant launch token private key must be a PKCS#8 PEM private key."
+    );
+  }
+
+  if (
+    parsed.data.KVISA_ASSISTANT_ENABLED &&
     !parsed.data.KVISA_ASSISTANT_LAUNCH_TOKEN_KEY_ID
   ) {
     throw new Error(
@@ -158,4 +153,15 @@ export function isProductionEnv(appEnv: AppEnv["APP_ENV"]): boolean {
 
 function normalizePem(value: string): string {
   return value.replaceAll("\\n", "\n").trim();
+}
+
+function isPkcs8PrivateKey(value: string): boolean {
+  const privateKey = normalizePem(value);
+
+  try {
+    createPrivateKey({ key: privateKey, format: "pem", type: "pkcs8" });
+    return true;
+  } catch {
+    return false;
+  }
 }
