@@ -11,6 +11,8 @@ const validEnv = {
   ENCRYPTION_KEY: "b".repeat(32),
   AUTH_EMAIL_FROM: "Aether Foundry <security@example.com>",
 };
+const placeholderLaunchTokenPrivateKey =
+  "-----BEGIN PRIVATE KEY-----\\nreplace-with-pkcs8-rsa-private-key\\n-----END PRIVATE KEY-----";
 const validLaunchTokenPrivateKey = generatePrivateKeyPem().replaceAll("\n", "\\n");
 
 describe("parseAppEnv", () => {
@@ -53,6 +55,21 @@ describe("parseAppEnv", () => {
       parseAppEnv({ ...validEnv, KVISA_ASSISTANT_ENABLED: "false" })
         .KVISA_ASSISTANT_LAUNCH_URL
     ).toBeUndefined();
+
+    expect(
+      parseAppEnv({
+        ...validEnv,
+        KVISA_ASSISTANT_ENABLED: "false",
+        KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY:
+          placeholderLaunchTokenPrivateKey,
+      })
+    ).toEqual(
+      expect.objectContaining({
+        KVISA_ASSISTANT_ENABLED: false,
+        KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY:
+          placeholderLaunchTokenPrivateKey,
+      })
+    );
 
     expect(() =>
       parseAppEnv({ ...validEnv, KVISA_ASSISTANT_ENABLED: "true" })
@@ -113,6 +130,8 @@ describe("parseAppEnv", () => {
     expect(() =>
       parseAppEnv({
         ...validEnv,
+        KVISA_ASSISTANT_ENABLED: "true",
+        KVISA_ASSISTANT_LAUNCH_URL: "http://localhost:3001",
         KVISA_ASSISTANT_LAUNCH_TOKEN_PRIVATE_KEY: "not a pem key",
       })
     ).toThrow(

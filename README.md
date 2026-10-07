@@ -75,6 +75,11 @@ The database health endpoint is available at `/api/health/database`. It reports
 only whether the database is available and never returns credentials, hostnames,
 driver errors, stack traces, or migration details.
 
+KVisaAssistant launch-token keys are only required when
+`KVISA_ASSISTANT_ENABLED=true`. The default local environment keeps the
+integration disabled, so the sign-in and portal routes can run without local
+crypto material.
+
 ## Architecture
 
 - `app/` contains routes, layouts, metadata, and route composition.
